@@ -1,7 +1,7 @@
 # Findchess
 
-The goal of this application is to read an image, detect the location of chess boards 
-in it, if any.
+The goal of this application is to detect the location of chess boards 
+in an image, if any are present.
 
 ## Setting stuff up
 
