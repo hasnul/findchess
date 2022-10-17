@@ -1,7 +1,7 @@
 # Findchess
 
-The goal of this application is to read an image, detect the chess boards in it and
-export them using the FEN notation (https://en.wikipedia.org/wiki/Forsyth–Edwards_Notation).
+The goal of this application is to read an image, detect the location of chess boards 
+in it, if any.
 
 ## Setting stuff up
 
