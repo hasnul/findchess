@@ -13,7 +13,8 @@ def showImage(image, name="image"):
     cv2.destroyAllWindows()
 
 def drawLine(image, a, b, color, thickness=1):
-    cv2.line(image, tuple(a), tuple(b), color, thickness)
+    rnd = lambda x : (round(x[0]), round(x[1]))
+    cv2.line(image, rnd(a), rnd(b), color, thickness)
 
 
 def drawContour(image, contour, color, thickness=4):
@@ -41,8 +42,8 @@ def drawLines(image, lines, color=(0,0,255), thickness=2):
     for l in lines:
         l.draw(image, color, thickness)
 
-def drawPoint(image, point, color, thickness=4):
-    cv2.circle(image, tuple([int(i) for i in point]), thickness, color)
+def drawPoint(image, point, color, radius=3, thickness=2):
+    cv2.circle(image, tuple([int(i) for i in point]), radius, color, thickness)
 
 
 def ratio(a,b):
