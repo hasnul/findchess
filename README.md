@@ -3,20 +3,7 @@
 The goal of this application is to detect the location of chess boards 
 in an image, if any are present.
 
-## Setting stuff up
-
-```
-    virtualenv env
-    source env/bin/activate
-    pip install -r requirements.txt
-    python src/main.py <filename>
-```
-
-## Roadmap
-
-### Done
-
-#### Board Detection
+## Board Detection
 - Read Image from file
 
 ![Original Image](./images/orig.png)
@@ -61,9 +48,8 @@ in an image, if any are present.
 
 ![Extracted Board](./images/extracted.png)
 
-### Doing
 
-#### Grid Detection/Tile extraction
+## Grid Detection/Tile extraction
   - Using OpenCV to detect grids
 
   - Using Canny algorithm for edge detection
