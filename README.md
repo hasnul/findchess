@@ -79,8 +79,3 @@ in an image, if any are present.
 
     ![Detected Grid](./images/grid.png)
 
-### To Do
-
-#### Piece Detection
-
-#### Rule-based Board Validation/Self-Correction
