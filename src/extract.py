@@ -1,7 +1,7 @@
 from line import Line, partitionLines, filterCloseLines
 from perspective import getPerspective
 from util import ratio
-from util import showImage, drawPerspective, drawBoundaries, drawContour, writeDocumentationImage
+from util import showImage, drawPerspective, drawBoundaries, drawContour, writedoc
 from util import randomColor
 
 

@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import random
 
-def writeDocumentationImage(image, name):
+def writedoc(image, name):
     cv2.imwrite("images/" + name + ".png", image)
 
 def showImage(image, name="image"):
