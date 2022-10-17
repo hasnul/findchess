@@ -1,4 +1,4 @@
-# chessocr
+# Findchess
 
 A OCR application for chess boards
 
