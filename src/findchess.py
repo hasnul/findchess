@@ -1,7 +1,4 @@
 import sys
-sys.path.append('/usr/lib/python2.7/site-packages/')
-sys.path.append('/usr/local/lib/python2.7/site-packages/')
-
 from board import Board
 from extract import extractBoards, extractGrid, extractTiles, ignoreContours, largestContour
 from util import showImage, drawPerspective, drawBoundaries, drawLines, drawPoint, drawContour, randomColor
@@ -11,11 +8,6 @@ import random
 import cv2
 import numpy as np
 import argparse
-
-
-
-extract_width=400
-extract_height=400
 
 
 def extractPiece(tile, margin=0.05):
@@ -34,25 +26,19 @@ def extractPiece(tile, margin=0.05):
    im_gray = cv2.medianBlur(im_gray, 3)
    imgs.append(cv2.cvtColor(im_gray, cv2.COLOR_GRAY2BGR))
 
-
-
    bright = np.mean(im_gray)
    im_bw = im_gray
    im_bw[np.where(im_gray < bright)] = 0
    im_bw[np.where(im_gray >= bright)] = 255
    imgs.append(cv2.cvtColor(im_bw, cv2.COLOR_GRAY2BGR))
 
-
    if np.mean(im_bw) < 128:
       im_bw = 255 - im_bw
 
    imgs.append(cv2.cvtColor(im_bw, cv2.COLOR_GRAY2BGR))
 
-
    #_, im_bw = cv2.threshold(im_gray, 50, 250, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
    #im_bw = cv2.Canny(im_bw, 0,255, apertureSize=5)
-
-
 
    contours,hierarchy = cv2.findContours(im_bw.copy(),  cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
 
@@ -66,12 +52,7 @@ def extractPiece(tile, margin=0.05):
       drawContour(tmp, c, randomColor(), thickness=1)
 
    imgs.append(tmp)
-
-
    return imgs
-
-
-
 
 
 def main_dev(board, args):
@@ -79,6 +60,7 @@ def main_dev(board, args):
 
 def main_train(board, args):
    pass
+
 
 def main_show_tiles(board, args):
    imgs = []
@@ -93,16 +75,14 @@ def main_show_tiles(board, args):
    showImage(np.vstack(imgs))
 
 
+if __name__ == "__main__":
+   print("TODO!")
+   sys.exit()
 
-
-
-
-def main(argv):
    actions = {}
    actions["train"] = main_train
    actions["show_tiles"] = main_show_tiles
    actions["dev"] = main_dev
-
 
    parser = argparse.ArgumentParser(description='A chess OCR application.')
    parser.add_argument('filenames', metavar='filename', type=str, nargs='+',
@@ -117,10 +97,7 @@ def main(argv):
                        help='action to perform (default: show_tiles)')
 
    args = parser.parse_args()
-
    action = actions[args.action]
-
-
 
    for filename in args.filenames:
       image = cv2.imread(filename)
@@ -128,6 +105,8 @@ def main(argv):
 
       if args.extract_boards:
          print("Extracting Boards")
+         extract_width=400
+         extract_height=400
          boards = extractBoards(image, extract_width, extract_height)
       else:
          boards = [image]
@@ -149,6 +128,3 @@ def main(argv):
          print("Running action")
          action(b, args)
 
-
-
-main(sys.argv)
