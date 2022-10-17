@@ -4,17 +4,21 @@ from util import showImage, drawPerspective, drawBoundaries, drawContour, drawPo
 from line import Line, partitionLines, filterCloseLines
 
 
-def getPerspective(image, points, houghThreshold=150, hough_threshold_step=20):
+def getPerspective(image, points, houghThreshold=160, hough_threshold_step=20):
     yy, xx, _ = image.shape
     tmp = np.zeros(image.shape[0:2], np.uint8);
     drawContour(tmp, points, (255,), 1)
 
     grid = None
     for i in range(houghThreshold//hough_threshold_step):
-        lines = cv2.HoughLines(tmp, 1, np.pi / 180, houghThreshold-(i * hough_threshold_step))
-        if lines is None:
+
+        hough_lines = cv2.HoughLines(tmp, 1, np.pi / 180,
+                                     houghThreshold - i * hough_threshold_step)  # numpy array
+        if hough_lines is None:
             continue
-        lines = [Line(l[0], l[1]) for l in lines[0]]
+
+        lines = [Line(l[0], l[1]) for l in hough_lines.squeeze(axis=1)]  # list of Line objects
+
         (horizontal, vertical) = partitionLines(lines)
         vertical = filterCloseLines(vertical, horizontal=False)
         horizontal = filterCloseLines(horizontal, horizontal=True)
@@ -23,10 +27,8 @@ def getPerspective(image, points, houghThreshold=150, hough_threshold_step=20):
             grid = (vertical, horizontal)
             break
 
-
     if grid is None:
         return None
-
 
     if vertical[0].getCenter()[0] > vertical[1].getCenter()[0]:
         v2, v1 = vertical
@@ -38,12 +40,7 @@ def getPerspective(image, points, houghThreshold=150, hough_threshold_step=20):
     else:
         h1, h2 = horizontal
 
-
-
-    perspective = (h1.intersect(v1),
-                   h1.intersect(v2),
-                   h2.intersect(v2),
-                   h2.intersect(v1))
+    return h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1)
 
     ## Doc ##
     #tmp = cv2.cvtColor(tmp, cv2.COLOR_GRAY2BGR)
@@ -57,6 +54,3 @@ def getPerspective(image, points, houghThreshold=150, hough_threshold_step=20):
     #writeDocumentationImage(tmp_bw, "contour_lines_bw")
     #writeDocumentationImage(tmp_orig, "contour_lines_orig")
     ## Doc ##
-
-
-    return perspective
