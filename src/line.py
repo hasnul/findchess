@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+
 class Line:
     def __init__(self, rho, theta):
         self._rho = rho
@@ -9,16 +10,16 @@ class Line:
         self._sin_factor = np.sin(theta)
         self._center = (self._cos_factor * rho, self._sin_factor * rho)
 
-    def getCenter(self):
+    def get_center(self):
         return self._center
 
-    def getRho(self):
+    def get_rho(self):
         return self._rho
 
-    def getTheta(self):
+    def get_theta(self):
         return self._theta
 
-    def getSegment(self, lenLeft, lenRight):
+    def get_segment(self, lenLeft, lenRight):
         a = self._cos_factor
         b = self._sin_factor
         (x0, y0) = self._center
@@ -29,10 +30,10 @@ class Line:
         y2 = int(y0 - lenLeft  * a)
         return ((x1, y1), (x2, y2))
 
-    def isHorizontal(self, thresholdAngle=np.pi / 4):
+    def is_horizontal(self, thresholdAngle=np.pi / 4):
         return abs(np.sin(self._theta)) > np.cos(thresholdAngle)
 
-    def isVertical(self, thresholdAngle=np.pi / 4):
+    def is_vertical(self, thresholdAngle=np.pi / 4):
         return abs(np.cos(self._theta)) > np.cos(thresholdAngle)
 
     def intersect(self, line):
@@ -54,7 +55,8 @@ class Line:
     def __repr__(self):
         return "(t: %.2fdeg, r: %.0f)" % (self._theta *360/np.pi, self._rho)
 
-def partitionLines(lines):
+
+def partition_lines(lines):
     h = filter(lambda x: x.isHorizontal(), lines)
     v = filter(lambda x: x.isVertical(), lines)
 
@@ -69,7 +71,8 @@ def partitionLines(lines):
 
     return (h, v)
 
-def filterCloseLines(lines, horizontal=True, threshold = 40):
+
+def filter_close_lines(lines, horizontal=True, threshold = 40):
     if horizontal:
         item = 1
     else:

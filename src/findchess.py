@@ -6,7 +6,7 @@ import argparse
 import line
 
 
-def drawContour(image, contour, color, thickness=4):
+def draw_contour(image, contour, color, thickness=4):
    rnd = lambda x : (round(x[0]), round(x[1]))
    for i in range(len(contour)):
       p1 = tuple(contour[i])
@@ -14,7 +14,7 @@ def drawContour(image, contour, color, thickness=4):
       cv2.line(image, rnd(p1), rnd(p2), color, thickness)
 
 
-def largestContour(contours):
+def longest_contour(contours):
    """Finds the contour with the largest area in the list.
    :param contours: list of contours
    :returns: the largest countour
@@ -29,7 +29,7 @@ def largestContour(contours):
    return largest[1]
 
 
-def ignoreContours(img,
+def ignore_contours(img,
                    contours,
                    hierarchy=None,
                    min_ratio_bounding=0.6,
@@ -79,7 +79,7 @@ def ignoreContours(img,
    return ret
 
 
-def extractBoards(img, w, h):
+def extract_boards(img, w, h):
    """Extracts all boards from an image. This function applies perspective correction.
    :param img: source image
    :param w: output width
@@ -91,20 +91,20 @@ def extractBoards(img, w, h):
 
    contours,hierarchy = cv2.findContours(im_bw,  cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
 
-   contour_ids = ignoreContours(im_bw, contours, hierarchy)
+   contour_ids = ignore_contours(im_bw, contours, hierarchy)
    boards = []
    for i in contour_ids:
       c = contours[i]
       c = np.squeeze(c,1)
-      perspective = getPerspective(img, c)
+      perspective = get_perspective(img, c)
       if perspective is not None:
-         b = extractPerspective(img, perspective, w, h)
+         b = extract_perspective(img, perspective, w, h)
          boards.append(b)
 
    return boards
 
 
-def extractGrid(img,
+def extract_grid(img,
                 nvertical,
                 nhorizontal,
                 threshold1 = 50,
@@ -143,7 +143,7 @@ def extractGrid(img,
          return (horizontal, vertical)
 
 
-def extractTiles(img, grid, w, h):
+def extract_tiles(img, grid, w, h):
    ret = []
 
    for x in range(8):
@@ -155,15 +155,15 @@ def extractTiles(img, grid, w, h):
          h2 = grid[0][y+1]
 
          perspective = (h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1))
-         tile = extractPerspective(img, perspective, w, h)
+         tile = extract_perspective(img, perspective, w, h)
          ret.append(((x,y), tile))
 
    return ret
 
 
-def getPerspective(image, points, houghThreshold=160, hough_threshold_step=20):
+def get_perspective(image, points, houghThreshold=160, hough_threshold_step=20):
    tmp = np.zeros(image.shape[0:2], np.uint8);
-   drawContour(tmp, points, (255,), 1)
+   draw_contour(tmp, points, (255,), 1)
 
    grid = None
    for i in range(houghThreshold//hough_threshold_step):
@@ -199,7 +199,7 @@ def getPerspective(image, points, houghThreshold=160, hough_threshold_step=20):
    return h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1)
 
 
-def extractPerspective(image, perspective, w, h, dest=None):
+def extract_perspective(image, perspective, w, h, dest=None):
    if dest is None:
       dest = ((0,0), (w, 0), (w,h), (0, h))
 
@@ -237,14 +237,14 @@ if __name__ == "__main__":
          extract_width = 400
          extract_height = 400
 
-         boards = extractBoards(image, extract_width, extract_height)
+         boards = extract_boards(image, extract_width, extract_height)
 
       else:
          boards = [image]
 
       for b in boards:
          print("Extracting Grid")
-         grid = extractGrid(b, 9, 9)
+         grid = extract_grid(b, 9, 9)
 
          print(grid)
          if grid is None:
@@ -252,4 +252,4 @@ if __name__ == "__main__":
             continue
 
          print("Extracting Tiles")
-         tiles = extractTiles(b, grid, 100, 100)
+         tiles = extract_tiles(b, grid, 100, 100)
