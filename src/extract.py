@@ -8,6 +8,13 @@ import cv2
 import numpy as np
 
 
+def drawContour(image, contour, color, thickness=4):
+    for i in range(len(contour)):
+        p1 = tuple(contour[i])
+        p2 = tuple(contour[int((i+1) % len(contour))])
+        drawLine(image, p1, p2, color, thickness)
+
+
 def largestContour(contours):
     """Finds the contour with the largest area in the list.
     :param contours: list of contours
