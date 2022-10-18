@@ -220,64 +220,6 @@ def extractPerspective(image, perspective, w, h, dest=None):
     return cv2.warpPerspective(image, coeffs, (w, h))
 
 
-def extractPiece(tile, margin=0.05):
-   imgs = [tile]
-   w, h, _ = tile.shape
-
-   im_gray = cv2.cvtColor(tile, cv2.COLOR_BGR2GRAY)
-   imgs.append(cv2.cvtColor(im_gray, cv2.COLOR_GRAY2BGR))
-
-#   im_gray = im_gray[(h*margin):(h*(1-margin)),
-#                     (w*margin):(w*(1-margin))]
-#   imgs.append(cv2.cvtColor(im_gray, cv2.COLOR_GRAY2BGR))
-
-
-#   im_gray = cv2.equalizeHist(im_gray)
-   im_gray = cv2.medianBlur(im_gray, 3)
-   imgs.append(cv2.cvtColor(im_gray, cv2.COLOR_GRAY2BGR))
-
-   bright = np.mean(im_gray)
-   im_bw = im_gray
-   im_bw[np.where(im_gray < bright)] = 0
-   im_bw[np.where(im_gray >= bright)] = 255
-   imgs.append(cv2.cvtColor(im_bw, cv2.COLOR_GRAY2BGR))
-
-   if np.mean(im_bw) < 128:
-      im_bw = 255 - im_bw
-
-   imgs.append(cv2.cvtColor(im_bw, cv2.COLOR_GRAY2BGR))
-
-   #_, im_bw = cv2.threshold(im_gray, 50, 250, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-   #im_bw = cv2.Canny(im_bw, 0,255, apertureSize=5)
-
-   contours,hierarchy = cv2.findContours(im_bw.copy(),  cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
-
-   hulls = [cv2.convexHull(c) for c in contours]
-   ids = ignoreContours(im_bw, hulls, max_area_percentage=0.75, min_area_percentage=0.2)
-
-   im_bw = cv2.cvtColor(im_bw, cv2.COLOR_GRAY2BGR)
-   tmp = im_bw.copy()
-   for i in ids:
-      c = np.squeeze(hulls[i], 1)
-      drawContour(tmp, c, randomColor(), thickness=1)
-
-   imgs.append(tmp)
-   return imgs
-
-
-def main_show_tiles(board, args):
-   imgs = []
-   for y in range(8):
-      imgs_row = []
-      for x in range(8):
-         t = board.getTile(x,y)
-         tmp = extractPiece(t.getImage())
-         imgs_row.append(np.vstack(tmp))
-      imgs.append(np.hstack(imgs_row))
-
-   showImage(np.vstack(imgs))
-
-
 if __name__ == "__main__":
    print("TODO!")
    sys.exit()
