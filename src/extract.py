@@ -54,6 +54,8 @@ def ignoreContours(img,
             hierarchy = np.squeeze(hierarchy, 0)
     img_area = img.shape[0] * img.shape[1]
 
+    ratio = lambda a, b : min(a,b)/float(max(a,b)) if a != 0 and b != 0 else -1 
+    
     for c in contours:
         i += 1
 
