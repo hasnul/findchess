@@ -134,7 +134,7 @@ def extractGrid(img,
       if lines is None:
          continue
 
-      lines = [line.Line(l[0], l[1]) for l in lines[0]]
+      lines = [line.Line(l[0], l[1]) for l in lines.squeeze(axis=1)]
       horizontal, vertical = line.partitionLines(lines)
       vertical = line.filterCloseLines(vertical, horizontal=False, threshold=close_threshold_v)
       horizontal = line.filterCloseLines(horizontal, horizontal=True, threshold=close_threshold_h)
