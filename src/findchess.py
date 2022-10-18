@@ -1,13 +1,8 @@
 import sys
-from board import Board
-from extract import extractBoards, extractGrid, extractTiles, ignoreContours, largestContour
-from util import showImage, drawPerspective, drawBoundaries, drawLines, drawPoint, drawContour, randomColor
-from line import Line
-
-import random
 import cv2
 import numpy as np
 import argparse
+from line import Line
 
 
 def drawContour(image, contour, color, thickness=4):
@@ -268,13 +263,6 @@ def extractPiece(tile, margin=0.05):
 
    imgs.append(tmp)
    return imgs
-
-
-def main_dev(board, args):
-   pass
-
-def main_train(board, args):
-   pass
 
 
 def main_show_tiles(board, args):
