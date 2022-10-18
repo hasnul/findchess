@@ -56,34 +56,36 @@ class Line:
         return "(t: %.2fdeg, r: %.0f)" % (self._theta *360/np.pi, self._rho)
 
 
-def partition_lines(lines):
-    h = filter(lambda x: x.isHorizontal(), lines)
-    v = filter(lambda x: x.isVertical(), lines)
+    @classmethod
+    def partition_lines(lines):
+        h = filter(lambda x: x.isHorizontal(), lines)
+        v = filter(lambda x: x.isVertical(), lines)
 
-    h = [(l._center[1], l) for l in h]
-    v = [(l._center[0], l) for l in v]
+        h = [(l._center[1], l) for l in h]
+        v = [(l._center[0], l) for l in v]
 
-    h.sort()
-    v.sort()
+        h.sort()
+        v.sort()
 
-    h = [l[1] for l in h]
-    v = [l[1] for l in v]
+        h = [l[1] for l in h]
+        v = [l[1] for l in v]
 
-    return (h, v)
+        return (h, v)
 
 
-def filter_close_lines(lines, horizontal=True, threshold = 40):
-    if horizontal:
-        item = 1
-    else:
-        item = 0
+    @classmethod
+    def filter_close_lines(lines, horizontal=True, threshold = 40):
+        if horizontal:
+            item = 1
+        else:
+            item = 0
 
-    i = 0
-    ret = []
+        i = 0
+        ret = []
 
-    while i < len(lines):
-        itmp = i
-        while i < len(lines) and (lines[i]._center[item] - lines[itmp]._center[item] < threshold):
-            i += 1
-        ret.append(lines[itmp + int((i - itmp) / 2)])
-    return ret
+        while i < len(lines):
+            itmp = i
+            while i < len(lines) and (lines[i]._center[item] - lines[itmp]._center[item] < threshold):
+                i += 1
+            ret.append(lines[itmp + int((i - itmp) / 2)])
+        return ret

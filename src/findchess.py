@@ -3,8 +3,7 @@
 import cv2
 import numpy as np
 import argparse
-import line
-
+from line import Line
 
 def draw_contour(image, contour, color, thickness=4):
    rnd = lambda x : (round(x[0]), round(x[1]))
@@ -134,10 +133,10 @@ def extract_grid(img,
       if lines is None:
          continue
 
-      lines = [line.Line(l[0], l[1]) for l in lines.squeeze(axis=1)]
-      horizontal, vertical = line.partitionLines(lines)
-      vertical = line.filterCloseLines(vertical, horizontal=False, threshold=close_threshold_v)
-      horizontal = line.filterCloseLines(horizontal, horizontal=True, threshold=close_threshold_h)
+      lines = [Line(l[0], l[1]) for l in lines.squeeze(axis=1)]
+      horizontal, vertical = Line.partition_lines(lines)
+      vertical = Line.filter_close_lines(vertical, horizontal=False, threshold=close_threshold_v)
+      horizontal = Line.filter_close_lines(horizontal, horizontal=True, threshold=close_threshold_h)
 
       if len(vertical) >= nvertical and len(horizontal) >= nhorizontal:
          return (horizontal, vertical)
@@ -173,11 +172,11 @@ def get_perspective(image, points, houghThreshold=160, hough_threshold_step=20):
       if hough_lines is None:
          continue
 
-      lines = [line.Line(l[0], l[1]) for l in hough_lines.squeeze(axis=1)]  # list of Line objects
+      lines = [Line(l[0], l[1]) for l in hough_lines.squeeze(axis=1)]  # list of Line objects
 
-      horizontal, vertical = line.partitionLines(lines)
-      vertical = line.filterCloseLines(vertical, horizontal=False)
-      horizontal = line.filterCloseLines(horizontal, horizontal=True)
+      horizontal, vertical = Line.partition_lines(lines)
+      vertical = Line.filter_close_lines(vertical, horizontal=False)
+      horizontal = Line.filter_close_lines(horizontal, horizontal=True)
 
       if len(vertical) == 2 and len(horizontal) == 2:
          grid = (vertical, horizontal)
