@@ -3,79 +3,7 @@
 import cv2
 import numpy as np
 import argparse
-from line import Line
-
-def draw_contour(image, contour, color, thickness=4):
-   rnd = lambda x : (round(x[0]), round(x[1]))
-   for i in range(len(contour)):
-      p1 = tuple(contour[i])
-      p2 = tuple(contour[int((i+1) % len(contour))])
-      cv2.line(image, rnd(p1), rnd(p2), color, thickness)
-
-
-def longest_contour(contours):
-   """Finds the contour with the largest area in the list.
-   :param contours: list of contours
-   :returns: the largest countour
-   """
-
-   largest = (0, [])
-   for c in contours:
-      contour_area = cv2.contourArea(c)
-      if contour_area > largest[0]:
-         largest = (contour_area, c)
-
-   return largest[1]
-
-
-def ignore_contours(img,
-                   contours,
-                   hierarchy=None,
-                   min_ratio_bounding=0.6,
-                   min_area_percentage=0.01,
-                   max_area_percentage=0.40):
-   """Filters a contour list based on some rules. If hierarchy != None,
-   only top-level contours are considered.
-   param img: source image
-   :param contours: list of contours
-   :param hierarchy: contour hierarchy
-   :param min_ratio_bounding: minimum contour area vs. bounding box area ratio
-   :param min_area_percentage: minimum contour vs. image area percentage
-   :param max_area_percentage: maximum contour vs. image area percentage
-   :returns: a list with the unfiltered countour ids
-   """
-
-   ret = []
-   i = -1
-
-   if hierarchy is not None:
-      while len(hierarchy.shape) > 2:
-         hierarchy = np.squeeze(hierarchy, 0)
-   img_area = img.shape[0] * img.shape[1]
-
-   ratio = lambda a, b : min(a,b)/float(max(a,b)) if a != 0 and b != 0 else -1
-
-   for c in contours:
-      i += 1
-
-      if hierarchy is not None and \
-         not hierarchy[i][2] == -1:
-         continue
-
-      _,_,w,h = tmp = cv2.boundingRect(c)
-      if ratio(h,w) < min_ratio_bounding:
-         continue
-
-      contour_area = cv2.contourArea(c)
-      img_contour_ratio = ratio(img_area, contour_area)
-      if img_contour_ratio < min_area_percentage:
-         continue
-      if img_contour_ratio > max_area_percentage:
-         continue
-
-      ret.append(i)
-
-   return ret
+from line import Line, Contours
 
 
 def extract_boards(img, w, h):
@@ -88,9 +16,8 @@ def extract_boards(img, w, h):
    im_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
    _, im_bw = cv2.threshold(im_gray, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 
-   contours,hierarchy = cv2.findContours(im_bw,  cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
-
-   contour_ids = ignore_contours(im_bw, contours, hierarchy)
+   contours = Contours(im_bw)
+   contour_ids = contours.filter(im_bw)
    boards = []
    for i in contour_ids:
       c = contours[i]
@@ -118,7 +45,6 @@ def extract_grid(img,
    :param nhorizontal: number of horizontal lines
    :returns: a pair (horizontal, vertical). Both elements are lists with the lines' positions.
    """
-
 
    w, h, _ = img.shape
    close_threshold_v = (w / nvertical) / 4
@@ -162,7 +88,7 @@ def extract_tiles(img, grid, w, h):
 
 def get_perspective(image, points, houghThreshold=160, hough_threshold_step=20):
    tmp = np.zeros(image.shape[0:2], np.uint8);
-   draw_contour(tmp, points, (255,), 1)
+   Contours.draw_contour(tmp, points, (255,), 1)
 
    grid = None
    for i in range(houghThreshold//hough_threshold_step):

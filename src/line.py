@@ -93,3 +93,85 @@ class Line:
             ret.append(lines[itmp + int((i - itmp) / 2)])
 
         return ret
+
+
+class Contours:
+    
+    def __init__(self, im_bw):
+        self.contours, self.hierarchy = cv2.findContours(im_bw, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
+
+
+    def __getitem__(self, index):
+        return self.contours[index]
+
+
+    @classmethod
+    def draw_contour(cls, image, contour, color, thickness=4):
+        rnd = lambda x : (round(x[0]), round(x[1]))
+        for i in range(len(contour)):
+            p1 = tuple(contour[i])
+            p2 = tuple(contour[int((i+1) % len(contour))])
+            cv2.line(image, rnd(p1), rnd(p2), color, thickness)
+
+
+    def longest(self):
+        """Finds the contour enclosing the largest area.
+        :param contours: list of contours
+        :returns: the largest countour
+        """
+
+        longest = (0, [])
+        for c in self.contours:
+           contour_area = cv2.contourArea(c)
+           if contour_area > longest[0]:
+                longest = (contour_area, c)
+
+        return longest[1]
+
+
+    def filter(self, img, min_ratio_bounding=0.6, min_area_percentage=0.01,
+               max_area_percentage=0.40):
+        """Filters a contour list based on some rules. If hierarchy != None,
+        only top-level contours are considered.
+        param img: source image
+        :param contours: list of contours
+        :param hierarchy: contour hierarchy
+        :param min_ratio_bounding: minimum contour area vs. bounding box area ratio
+        :param min_area_percentage: minimum contour vs. image area percentage
+        :param max_area_percentage: maximum contour vs. image area percentage
+        :returns: a list with the unfiltered countour ids
+        """
+
+        ret = []
+        i = -1
+
+        hierarchy = self.hierarchy
+        if hierarchy is not None:
+            while len(hierarchy.shape) > 2:
+                hierarchy = np.squeeze(hierarchy, 0)
+
+        img_area = img.shape[0] * img.shape[1]
+ 
+        ratio = lambda a, b : min(a,b)/float(max(a,b)) if a != 0 and b != 0 else -1
+ 
+        for c in self.contours:
+            i += 1
+ 
+            if hierarchy is not None and not hierarchy[i][2] == -1:
+                continue
+ 
+            _,_,w,h = tmp = cv2.boundingRect(c)
+            if ratio(h,w) < min_ratio_bounding:
+                continue
+ 
+            contour_area = cv2.contourArea(c)
+            img_contour_ratio = ratio(img_area, contour_area)
+            if img_contour_ratio < min_area_percentage:
+                continue
+            if img_contour_ratio > max_area_percentage:
+                continue
+ 
+            ret.append(i)
+ 
+        return ret
+ 
