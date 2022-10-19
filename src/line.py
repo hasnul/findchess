@@ -56,10 +56,13 @@ class Line:
         return "(t: %.2fdeg, r: %.0f)" % (self._theta *360/np.pi, self._rho)
 
 
+    # Don't need classmethods here. These methods can stand as their own functions.
+    # However, the module and the class are very closely named.
+
     @classmethod
-    def partition_lines(lines):
-        h = filter(lambda x: x.isHorizontal(), lines)
-        v = filter(lambda x: x.isVertical(), lines)
+    def partition_lines(cls, lines):
+        h = filter(lambda x: x.is_horizontal(), lines)
+        v = filter(lambda x: x.is_vertical(), lines)
 
         h = [(l._center[1], l) for l in h]
         v = [(l._center[0], l) for l in v]
@@ -74,7 +77,7 @@ class Line:
 
 
     @classmethod
-    def filter_close_lines(lines, horizontal=True, threshold = 40):
+    def filter_close_lines(cls, lines, horizontal=True, threshold = 40):
         if horizontal:
             item = 1
         else:
@@ -88,4 +91,5 @@ class Line:
             while i < len(lines) and (lines[i]._center[item] - lines[itmp]._center[item] < threshold):
                 i += 1
             ret.append(lines[itmp + int((i - itmp) / 2)])
+
         return ret
