@@ -100,7 +100,7 @@ class Contours:
     def __init__(self, img):
         im_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         _, self.im_bw = cv2.threshold(im_gray, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-        self.contours, self.hierarchy = cv2.findContours(im_bw, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
+        self.contours, self.hierarchy = cv2.findContours(self.im_bw, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
 
 
     def __getitem__(self, index):
