@@ -115,7 +115,6 @@ class Contours:
 
    def longest(self):
       """Finds the contour enclosing the largest area.
-      :param contours: list of contours
       :returns: the largest countour
       """
 
@@ -131,17 +130,11 @@ class Contours:
    def filter(self, min_ratio_bounding=0.6, min_area_percentage=0.01, max_area_percentage=0.40):
       """Filters a contour list based on some rules. If hierarchy != None,
       only top-level contours are considered.
-      param img: source image
-      :param contours: list of contours
-      :param hierarchy: contour hierarchy
       :param min_ratio_bounding: minimum contour area vs. bounding box area ratio
       :param min_area_percentage: minimum contour vs. image area percentage
       :param max_area_percentage: maximum contour vs. image area percentage
-      :returns: a list with the unfiltered countour ids
+      :returns: list of contours
       """
-
-      ret = []
-      i = -1
 
       hierarchy = self.hierarchy
       if hierarchy is not None:
