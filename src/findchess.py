@@ -198,12 +198,12 @@ class Perspective:
       if grid is None:
          return None
 
-      if vertical[0].getCenter()[0] > vertical[1].getCenter()[0]:
+      if vertical[0].get_center()[0] > vertical[1].get_center()[0]:
          v2, v1 = vertical
       else:
          v1, v2 = vertical
 
-      if horizontal[0].getCenter()[1] > horizontal[1].getCenter()[1]:
+      if horizontal[0].get_center()[1] > horizontal[1].get_center()[1]:
          h2, h1 = horizontal
       else:
          h1, h2 = horizontal
