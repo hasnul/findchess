@@ -13,11 +13,9 @@ def extract_boards(img, w, h):
    :param h: output height
    :returns: a list the extracted board images
    """
-   im_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-   _, im_bw = cv2.threshold(im_gray, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 
-   contours = Contours(im_bw)
-   contour_ids = contours.filter(im_bw)
+   contours = Contours(img)
+   contour_ids = contours.filter()
    boards = []
    for i in contour_ids:
       c = contours[i]

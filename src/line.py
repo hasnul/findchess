@@ -97,7 +97,9 @@ class Line:
 
 class Contours:
     
-    def __init__(self, im_bw):
+    def __init__(self, img):
+        im_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        _, self.im_bw = cv2.threshold(im_gray, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
         self.contours, self.hierarchy = cv2.findContours(im_bw, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
 
 
@@ -129,8 +131,7 @@ class Contours:
         return longest[1]
 
 
-    def filter(self, img, min_ratio_bounding=0.6, min_area_percentage=0.01,
-               max_area_percentage=0.40):
+    def filter(self, min_ratio_bounding=0.6, min_area_percentage=0.01, max_area_percentage=0.40):
         """Filters a contour list based on some rules. If hierarchy != None,
         only top-level contours are considered.
         param img: source image
@@ -150,7 +151,7 @@ class Contours:
             while len(hierarchy.shape) > 2:
                 hierarchy = np.squeeze(hierarchy, 0)
 
-        img_area = img.shape[0] * img.shape[1]
+        img_area = self.im_bw.shape[0] * self.im_bw.shape[1]
  
         ratio = lambda a, b : min(a,b)/float(max(a,b)) if a != 0 and b != 0 else -1
  
