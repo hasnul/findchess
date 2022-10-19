@@ -316,6 +316,9 @@ if __name__ == "__main__":
 
    args = parser.parse_args()
 
+   import time
+
+   start = time.time()
    for filename in args.filenames:
       image = cv2.imread(filename)
       print("---- %s ----" % filename)
@@ -332,14 +335,21 @@ if __name__ == "__main__":
       else:
          boards = [image]
 
-      for b in boards:
-         print("Extracting Grid")
-         grid = extract_grid(b, 9, 9)
+      for i, b in enumerate(boards):
 
-         print(grid)
-         if grid is None:
-            print("Could not find Grid")
-            continue
+         cv2.imwrite('board_' + str(i) + '.jpg', b)
+     
+      #for b in boards:
+      #   print("Extracting Grid")
+      #   grid = extract_grid(b, 9, 9)
 
-         print("Extracting Tiles")
-         tiles = extract_tiles(b, grid, 100, 100)
+      #   print(grid)
+      #   if grid is None:
+      #      print("Could not find Grid")
+      #      continue
+
+      #   print("Extracting Tiles")
+      #   tiles = extract_tiles(b, grid, 100, 100)
+
+   end = time.time()
+   print(f"Time taken = {end - start:.3f} seconds")
