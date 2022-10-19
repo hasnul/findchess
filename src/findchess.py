@@ -144,9 +144,9 @@ class Contours:
       img_area = self.im_bw.shape[0] * self.im_bw.shape[1]
  
       ratio = lambda a, b : min(a,b)/float(max(a,b)) if a != 0 and b != 0 else -1
- 
+
+      filtered = []
       for c in self.contours:
-         i += 1
  
          if hierarchy is not None and not hierarchy[i][2] == -1:
             continue
@@ -162,9 +162,9 @@ class Contours:
          if img_contour_ratio > max_area_percentage:
             continue
  
-         ret.append(i)
+         filtered.append(c)
  
-      return ret
+      return filtered
 
 
 class Perspective:
@@ -211,7 +211,7 @@ class Perspective:
       return cls(h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1))
 
 
-   def get_image(self, image, w, h, dest=None):
+   def correction(self, image, w, h, dest=None):
       if dest is None:
          dest = ((0,0), (w, 0), (w,h), (0, h))
 
@@ -236,14 +236,13 @@ def extract_boards(img, w, h):
    """
 
    contours = Contours(img)
-   contour_ids = contours.filter()
+   filtered = contours.filter()
    boards = []
-   for i in contour_ids:
-      c = contours[i]
-      c = np.squeeze(c,1)
-      perspective = Perspective.get_perspective(img, c)
+   for contour in filtered:
+      contour = np.squeeze(contour, 1)
+      perspective = Perspective.get_perspective(img, contour)
       if perspective is not None:
-         b = perspective.get_image(img, w, h)
+         b = perspective.correction(img, w, h)
          boards.append(b)
 
    return boards
@@ -299,7 +298,7 @@ def extract_tiles(img, grid, w, h):
          h2 = grid[0][y+1]
 
          perspective = Perspective(h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1))
-         tile = perspective.get_image(img, w, h)
+         tile = perspective.correction(img, w, h)
          ret.append(((x,y), tile))
 
    return ret
