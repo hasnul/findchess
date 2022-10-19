@@ -179,4 +179,61 @@ class Contours:
 
 
 class Perspective:
-   pass
+   def __init__(self, a, b, c, d):
+      self.perspective = a, b, c, d 
+
+
+   @classmethod
+   def get_perspective(cls, image, points, houghThreshold=160, hough_threshold_step=20):
+      tmp = np.zeros(image.shape[0:2], np.uint8);
+      Contours.draw_contour(tmp, points, (255,), 1)
+
+      grid = None
+      for i in range(houghThreshold//hough_threshold_step):
+
+         hough_lines = cv2.HoughLines(tmp, 1, np.pi / 180,
+                                      houghThreshold - i * hough_threshold_step)  # numpy array
+         if hough_lines is None:
+            continue
+
+         lines = [Line(l[0], l[1]) for l in hough_lines.squeeze(axis=1)]  # list of Line objects
+
+         horizontal, vertical = Line.partition_lines(lines)
+         vertical = Line.filter_close_lines(vertical, horizontal=False)
+         horizontal = Line.filter_close_lines(horizontal, horizontal=True)
+
+         if len(vertical) == 2 and len(horizontal) == 2:
+            grid = (vertical, horizontal)
+            break
+
+      if grid is None:
+         return None
+
+      if vertical[0].getCenter()[0] > vertical[1].getCenter()[0]:
+         v2, v1 = vertical
+      else:
+         v1, v2 = vertical
+
+      if horizontal[0].getCenter()[1] > horizontal[1].getCenter()[1]:
+         h2, h1 = horizontal
+      else:
+         h1, h2 = horizontal
+
+      return cls(h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1))
+
+
+   def get_image(self, image, w, h, dest=None):
+      if dest is None:
+         dest = ((0,0), (w, 0), (w,h), (0, h))
+
+      perspective = self.perspective
+      if perspective is None:
+         im_w, im_h,_ = image.shape
+         perspective = ((0,0), (im_w, 0), (im_w,im_h), (0, im_h))
+
+      perspective = np.array(perspective ,np.float32)
+      dest = np.array(dest ,np.float32)
+
+      coeffs = cv2.getPerspectiveTransform(perspective, dest)
+      return cv2.warpPerspective(image, coeffs, (w, h))
+

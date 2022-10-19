@@ -3,7 +3,7 @@
 import cv2
 import numpy as np
 import argparse
-from line import Line, Contours
+from line import Line, Contours, Perspective
 
 
 def extract_boards(img, w, h):
@@ -20,9 +20,9 @@ def extract_boards(img, w, h):
    for i in contour_ids:
       c = contours[i]
       c = np.squeeze(c,1)
-      perspective = get_perspective(img, c)
+      perspective = Perspective.get_perspective(img, c)
       if perspective is not None:
-         b = extract_perspective(img, perspective, w, h)
+         b = perspective.get_image(img, w, h)
          boards.append(b)
 
    return boards
@@ -77,64 +77,11 @@ def extract_tiles(img, grid, w, h):
          h1 = grid[0][y]
          h2 = grid[0][y+1]
 
-         perspective = (h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1))
-         tile = extract_perspective(img, perspective, w, h)
+         perspective = Perspective(h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1))
+         tile = perspective.get_image(img, w, h)
          ret.append(((x,y), tile))
 
    return ret
-
-
-def get_perspective(image, points, houghThreshold=160, hough_threshold_step=20):
-   tmp = np.zeros(image.shape[0:2], np.uint8);
-   Contours.draw_contour(tmp, points, (255,), 1)
-
-   grid = None
-   for i in range(houghThreshold//hough_threshold_step):
-
-      hough_lines = cv2.HoughLines(tmp, 1, np.pi / 180,
-                                     houghThreshold - i * hough_threshold_step)  # numpy array
-      if hough_lines is None:
-         continue
-
-      lines = [Line(l[0], l[1]) for l in hough_lines.squeeze(axis=1)]  # list of Line objects
-
-      horizontal, vertical = Line.partition_lines(lines)
-      vertical = Line.filter_close_lines(vertical, horizontal=False)
-      horizontal = Line.filter_close_lines(horizontal, horizontal=True)
-
-      if len(vertical) == 2 and len(horizontal) == 2:
-         grid = (vertical, horizontal)
-         break
-
-   if grid is None:
-      return None
-
-   if vertical[0].getCenter()[0] > vertical[1].getCenter()[0]:
-      v2, v1 = vertical
-   else:
-      v1, v2 = vertical
-
-   if horizontal[0].getCenter()[1] > horizontal[1].getCenter()[1]:
-      h2, h1 = horizontal
-   else:
-      h1, h2 = horizontal
-
-   return h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1)
-
-
-def extract_perspective(image, perspective, w, h, dest=None):
-   if dest is None:
-      dest = ((0,0), (w, 0), (w,h), (0, h))
-
-   if perspective is None:
-      im_w, im_h,_ = image.shape
-      perspective = ((0,0), (im_w, 0), (im_w,im_h), (0, im_h))
-
-   perspective = np.array(perspective ,np.float32)
-   dest = np.array(dest ,np.float32)
-
-   coeffs = cv2.getPerspectiveTransform(perspective, dest)
-   return cv2.warpPerspective(image, coeffs, (w, h))
 
 
 if __name__ == "__main__":
