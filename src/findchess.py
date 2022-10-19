@@ -169,7 +169,7 @@ class Contours:
 
 class Perspective:
    def __init__(self, a, b, c, d):
-      self.perspective = a, b, c, d 
+      self.corners = a, b, c, d
 
 
    @classmethod
@@ -215,15 +215,15 @@ class Perspective:
       if dest is None:
          dest = ((0,0), (w, 0), (w,h), (0, h))
 
-      perspective = self.perspective
-      if perspective is None:
+      corners = self.corners
+      if corners is None:
          im_w, im_h,_ = image.shape
-         perspective = ((0,0), (im_w, 0), (im_w,im_h), (0, im_h))
+         corners = ((0,0), (im_w, 0), (im_w,im_h), (0, im_h))
 
-      perspective = np.array(perspective ,np.float32)
+      quadrangle = np.array(corners ,np.float32)
       dest = np.array(dest ,np.float32)
 
-      coeffs = cv2.getPerspectiveTransform(perspective, dest)
+      coeffs = cv2.getPerspectiveTransform(quadrangle, dest)
       return cv2.warpPerspective(image, coeffs, (w, h))
 
 
