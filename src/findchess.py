@@ -51,7 +51,7 @@ class Line:
       return (x, y)
 
    def draw(self, image, color=(0,0,255), thickness=2):
-      p1, p2 = self.getSegment(1000,1000)
+      p1, p2 = self.get_segment(1000,1000)
       cv2.line(image, p1, p2, color, thickness)
 
 
@@ -353,3 +353,4 @@ if __name__ == "__main__":
 
    end = time.time()
    print(f"Time taken = {end - start:.3f} seconds")
+
