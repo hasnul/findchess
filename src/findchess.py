@@ -146,7 +146,7 @@ class Contours:
       ratio = lambda a, b : min(a,b)/float(max(a,b)) if a != 0 and b != 0 else -1
 
       filtered = []
-      for c in self.contours:
+      for i, c in enumerate(self.contours):
  
          if hierarchy is not None and not hierarchy[i][2] == -1:
             continue
