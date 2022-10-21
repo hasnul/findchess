@@ -185,6 +185,12 @@ class Quadrangle:
       self.corners = a, b, c, d
 
 
+   # To keep old notebooks working
+   @classmethod
+   def get_perspective(cls, image, points, houghThreshold=160, hough_threshold_step=20):
+      cls.get_quad(image, points, houghThreshold, hough_threshold_step)
+
+
    @classmethod
    def get_quad(cls, image, points, houghThreshold=160, hough_threshold_step=20):
       tmp = np.zeros(image.shape[0:2], np.uint8);
