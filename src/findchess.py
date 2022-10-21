@@ -270,14 +270,42 @@ def extract_boards(img, grid=None, labels="row", correction=False, brdsize=None)
    contours = Contours(img)
    filtered = contours.filter()
    boards = []
+   centroids = []
+   centroid = lambda m : (int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"]))
    for contour in filtered:
       contour = np.squeeze(contour, 1)
-      quad = Quadrangle.get_quad(img, contour)
-      if quad is not None:
-         b = quad.perspective_corr(img, w, h)
-         boards.append(b)
+      if correction:
+         assert brdsize is not None
+         assert isinstance(brdsize, int)
+         quad = Quadrangle.get_quad(img, contour)
+         b = quad.perspective_corr(img, brdsize, brdsize)
+      else:
+         x, y, w, h = cv2.boundingRect(contour)
+         b = img[y:y+h, x:x+w]
+      boards.append(b)
+      centroids.append(np.array(centroid(cv2.moments(contour))))
 
-   return boards
+   if grid:
+
+      centroids = np.array(centroids)
+      xcoords, ycoords = centroids[:, 0], centroids[:, 1]
+      sorted_x, sorted_y = list(np.argsort(xcoords)), list(np.argsort(ycoords))
+
+      assert len(grid) == 2
+      numrows, numcols = grid
+      findc = np.array(sorted_x).reshape(numcols, numrows)
+      findr = np.array(sorted_y).reshape(numrows, numcols)
+      col = lambda c: np.where(findc == c)[0][0]
+      row = lambda r: np.where(findr == r)[0][0]
+      if labels == "col":
+         labels = [row(i) + col(i)*numrows + 1 for i in range(numrows*numcols)]
+      else:
+         labels = [col(i) + row(i)*numcols + 1 for i in range(numrows*numcols)]
+
+   else:
+      labels = list(range(len(boards)))
+
+   return boards, labels
 
 
 def extract_grid(img,
@@ -361,18 +389,13 @@ if __name__ == "__main__":
       if args.extract_boards:
          print("Extracting Boards")
 
-         # TODO: why these numbers?
-         extract_width = 400
-         extract_height = 400
+         boards, labels = extract_boards(image, grid=(3, 2), labels="row")
 
-         boards = extract_boards(image, extract_width, extract_height)
+         for i, b in enumerate(boards):
+            cv2.imwrite(f"{labels[i]:04d}.jpg", b)
 
       else:
          boards = [image]
-
-      for i, b in enumerate(boards):
-
-         cv2.imwrite('board_' + str(i) + '.jpg', b)
      
       #for b in boards:
       #   print("Extracting Grid")
