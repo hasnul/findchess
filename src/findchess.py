@@ -151,7 +151,7 @@ class Contours:
          if hierarchy is not None and not hierarchy[i][2] == -1:
             continue
  
-         _,_,w,h = tmp = cv2.boundingRect(c)
+         _, _, w, h = cv2.boundingRect(c)
          if ratio(h,w) < min_ratio_bounding:
             continue
  
