@@ -1,0 +1,33 @@
+\documentclass[12pt]{article}
+\usepackage[left=0.3in, right=0.3in, top=1in, bottom=1in,paperheight=9.25in,paperwidth=7.25in]{geometry}
+\usepackage{xskak}
+
+\setchessboard{%
+boardfontsize=14pt,
+moversize=1em,
+label=false,
+margin=false,
+border=false,
+linewidth=2pt,
+padding=2pt,
+pgfborder}
+
+\begin{document}
+
+\begin{tabular}{p{0.3\textwidth}p{0.3\textwidth}p{0.3\textwidth}}
+
+\chessboard[inverse,setfen=8/8/4kpp1/3p1b2/p6P/2B5/6P1/6K1 b - - 0 1] &
+\chessboard[setfen=4rrk1/1bpR1p2/1pq1pQp1/p3P2p/P1PR3P/5N2/2P2PP1/6K1 w - - 0 1] &
+\chessboard[inverse, setfen=r5k1/ppp2r1p/3p3b/3Pn3/1n2PPp1/1P2K1P1/PBB1N2q/R2Q3R b - - 2 24]\\[1in]
+
+\chessboard[setfen=b2r3r/k4p1p/p2q1np1/NppP4/3p1Q2/P4PPB/1PP4P/1K1RR3 w - - 0 1] &
+\chessboard[setfen=3q1k2/8/8/8/4PP2/4KR2/4N3/8 w - - 0 1] &
+\chessboard[setfen=8/p3q1kp/1p2Pnp1/3pQ3/2pP4/1nP3N1/1B4PP/6K1 w - - 5 30]\\[1in]
+
+\chessboard[inverse,setfen=r2qr1k1/p4pbp/bp3np1/3p4/8/BPNnP1P1/P1Q1NPBP/R2R2K1 b - - 0 1] &
+\chessboard[setfen=rn2kb1r/p3qppp/2p2n2/1p2p1B1/2B5/1QN5/PPP2PPP/R3K2R w KQkq - 0 1] &
+\chessboard[inverse,setfen=3r1rk1/p3qp1p/2bb2p1/2p5/3P4/1P6/PBQN1PPP/2R2RK1 b - - 0 19]
+
+\end{tabular}
+
+\end{document}
