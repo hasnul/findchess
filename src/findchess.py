@@ -137,18 +137,27 @@ class Contours:
       """
 
       hierarchy = self.hierarchy
-      if hierarchy is not None:
-         while len(hierarchy.shape) > 2:
-            hierarchy = np.squeeze(hierarchy, 0)
+      if hierarchy is None:
+         return []
+
+      while len(hierarchy.shape) > 2:
+         hierarchy = np.squeeze(hierarchy, 0)
 
       img_area = self.im_bw.shape[0] * self.im_bw.shape[1]
  
       ratio = lambda a, b : min(a,b)/float(max(a,b)) if a != 0 and b != 0 else -1
 
+      NEXT_SIBLING, PREV_SIBLING, FIRST_CHILD, PARENT = 0, 1, 2, 3
+      NO_NODE = -1
+      parents = []
       filtered = []
       for i, c in enumerate(self.contours):
  
-         if hierarchy is not None and not hierarchy[i][2] == -1:
+         if hierarchy[i][FIRST_CHILD] != NO_NODE:
+            continue
+
+         # TODO: Only perform the following if num boards known and num boards > 1
+         if hierarchy[i][NEXT_SIBLING] == NO_NODE and hierarchy[i][PREV_SIBLING] == NO_NODE:
             continue
  
          _, _, w, h = cv2.boundingRect(c)
@@ -161,9 +170,13 @@ class Contours:
             continue
          if img_contour_ratio > max_area_percentage:
             continue
- 
+
+         parents.append(hierarchy[i][PARENT])
          filtered.append(c)
  
+      if not np.all(parents == parents[0]):
+         print("WARNING: Contour hierarchies with different parents.")
+
       return filtered
 
 
