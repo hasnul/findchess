@@ -321,8 +321,9 @@ if __name__ == "__main__":
                        help='specifiy that chess boards in a rectangular grid with "r" rows')
    parser.add_argument('-c', '--cols', type=int,
                        help='number of columns in the grid; if rows are given, cols are required')
-   parser.add_argument('-l', '--label',  default="row",
-                       help='"row" | "col"; row-wise or column-wise labelling for boards in a grid')
+   parser.add_argument('-l', '--label',  default="row", choices=['row', 'col'],
+                       help='row-wise or column-wise labelling for boards in a grid')
+   parser.add_argument('--crop', metavar='PIXELS', type=int, help='number of pixels to crop along each edge')
 
    args = parser.parse_args()
 
@@ -346,7 +347,11 @@ if __name__ == "__main__":
          boards, labels = extract_boards(image)
 
       for i, b in enumerate(boards):
-         cv2.imwrite(f"{labels[i]:04d}.jpg", b)
+         savefile = f"{labels[i]:04d}.jpg"
+         if args.crop:
+            cv2.imwrite(savefile, b[args.crop:-args.crop, args.crop:-args.crop])
+         else:
+            cv2.imwrite(savefile, b)
 
    end = time.time()
    print(f"Time taken = {end - start:.3f} seconds")
