@@ -3,6 +3,7 @@
 import cv2
 import numpy as np
 import argparse
+import sys
 
 
 class Line:
@@ -303,7 +304,7 @@ def extract_boards(img, grid=None, labels="row", correction=False, brdsize=None)
          labels = [col(i) + row(i)*numcols + 1 for i in range(numrows*numcols)]
 
    else:
-      labels = list(range(len(boards)))
+      labels = list(range(1, len(boards) + 1))
 
    return boards, labels
 
@@ -314,20 +315,35 @@ Perspective = Quadrangle
 
 if __name__ == "__main__":
 
-   parser = argparse.ArgumentParser(description='')
-   parser.add_argument('filenames', metavar='filename', type=str, nargs='+',
-                       help='The files to process.')
+   parser = argparse.ArgumentParser(description='Extract chessboard images from image containing chessboard diagrams')
+   parser.add_argument('filenames', nargs='+', help='Image files to process.')
+   parser.add_argument('-r', '--rows', type=int,
+                       help='specifiy that chess boards in a rectangular grid with "r" rows')
+   parser.add_argument('-c', '--cols', type=int,
+                       help='number of columns in the grid; if rows are given, cols are required')
+   parser.add_argument('-l', '--label',  default="row",
+                       help='"row" | "col"; row-wise or column-wise labelling for boards in a grid')
 
    args = parser.parse_args()
 
-   import time
+   if args.rows and not args.cols:
+      print('Missing column spec')
+      sys.exit()
 
+   if args.cols and not args.rows:
+      print('Missing rows spec')
+      sys.exit()
+
+   import time
    start = time.time()
    for filename in args.filenames:
       image = cv2.imread(filename)
-      print(f"filename")
+      print(f"{filename}")
 
-      boards, labels = extract_boards(image, grid=(3, 2), labels="row")
+      if args.rows and args.cols:
+         boards, labels = extract_boards(image, grid=(args.rows, args.cols), labels=args.label)
+      else:
+         boards, labels = extract_boards(image)
 
       for i, b in enumerate(boards):
          cv2.imwrite(f"{labels[i]:04d}.jpg", b)
