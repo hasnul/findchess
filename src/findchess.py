@@ -167,13 +167,13 @@ class Contours:
       return filtered
 
 
-class Perspective:
+class Quadrangle:
    def __init__(self, a, b, c, d):
       self.corners = a, b, c, d
 
 
    @classmethod
-   def get_perspective(cls, image, points, houghThreshold=160, hough_threshold_step=20):
+   def get_quad(cls, image, points, houghThreshold=160, hough_threshold_step=20):
       tmp = np.zeros(image.shape[0:2], np.uint8);
       draw_contour(tmp, points, (255,), 1)
 
@@ -211,7 +211,7 @@ class Perspective:
       return cls(h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1))
 
 
-   def correction(self, image, w, h, dest=None):
+   def perspective_corr(self, image, w, h, dest=None):
       if dest is None:
          dest = ((0,0), (w, 0), (w,h), (0, h))
 
@@ -225,6 +225,10 @@ class Perspective:
 
       coeffs = cv2.getPerspectiveTransform(quadrangle, dest)
       return cv2.warpPerspective(image, coeffs, (w, h))
+   
+
+   def correction(self, image, w, h, dest=None):  # support older code
+      return self.perspective_corr(image, w, h, dest)
 
 
 def extract_boards(img, w, h):
@@ -240,9 +244,9 @@ def extract_boards(img, w, h):
    boards = []
    for contour in filtered:
       contour = np.squeeze(contour, 1)
-      perspective = Perspective.get_perspective(img, contour)
-      if perspective is not None:
-         b = perspective.correction(img, w, h)
+      quad = Quadrangle.get_quad(img, contour)
+      if quad is not None:
+         b = quad.perspective_corr(img, w, h)
          boards.append(b)
 
    return boards
@@ -297,11 +301,14 @@ def extract_tiles(img, grid, w, h):
          h1 = grid[0][y]
          h2 = grid[0][y+1]
 
-         perspective = Perspective(h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1))
-         tile = perspective.correction(img, w, h)
+         quad = Quadrangle(h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1))
+         tile = quad.perspective_corr(img, w, h)
          ret.append(((x,y), tile))
 
    return ret
+
+
+Perspective = Quadrangle
 
 
 if __name__ == "__main__":
