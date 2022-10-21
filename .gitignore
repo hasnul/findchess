@@ -3,3 +3,4 @@ __pycache__/
 blokh1.jpg
 .ipynb_checkpoints/
 _private
+src/*.jpg
