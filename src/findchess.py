@@ -189,12 +189,11 @@ class Quadrangle:
    # To keep old notebooks working
    @classmethod
    def get_perspective(cls, image, points, houghThreshold=160, hough_threshold_step=20):
-      cls.get_quad(image, points, houghThreshold, hough_threshold_step)
+      return cls.get_quad(image, points, houghThreshold, hough_threshold_step)
 
 
    @classmethod
    def get_quad(cls, image, points, houghThreshold=160, hough_threshold_step=20):
-      print('in get quad')
       tmp = np.zeros(image.shape[0:2], np.uint8);
       draw_contour(tmp, points, (255,), 1)
 
@@ -228,7 +227,6 @@ class Quadrangle:
          h2, h1 = horizontal
       else:
          h1, h2 = horizontal
-      print('here')
       return cls(h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1))
 
 
