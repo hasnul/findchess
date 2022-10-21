@@ -324,6 +324,7 @@ if __name__ == "__main__":
    parser.add_argument('-l', '--label',  default="row", choices=['row', 'col'],
                        help='row-wise or column-wise labelling for boards in a grid')
    parser.add_argument('--crop', metavar='PIXELS', type=int, help='number of pixels to crop along each edge')
+   parser.add_argument('-p', '--print', action='store_true', help="just print the number of chess boards found; don't save")
 
    args = parser.parse_args()
 
@@ -337,21 +338,30 @@ if __name__ == "__main__":
 
    import time
    start = time.time()
-   for filename in args.filenames:
+
+   if args.rows and args.cols:
+      offset = args.rows * args.cols
+   else:
+      offset = 0
+
+   for filenum, filename in enumerate(args.filenames):
       image = cv2.imread(filename)
-      print(f"{filename}")
 
       if args.rows and args.cols:
          boards, labels = extract_boards(image, grid=(args.rows, args.cols), labels=args.label)
       else:
          boards, labels = extract_boards(image)
 
-      for i, b in enumerate(boards):
-         savefile = f"{labels[i]:04d}.jpg"
-         if args.crop:
-            cv2.imwrite(savefile, b[args.crop:-args.crop, args.crop:-args.crop])
-         else:
-            cv2.imwrite(savefile, b)
+      if args.print:
+         print(f"{filename}: {len(boards)}")
+      else:
+         print(f"{filename}")
+         for i, b in enumerate(boards):
+            savefile = f"{filenum*offset + labels[i]:04d}.jpg"
+            if args.crop:
+               cv2.imwrite(savefile, b[args.crop:-args.crop, args.crop:-args.crop])
+            else:
+               cv2.imwrite(savefile, b)
 
    end = time.time()
    print(f"Time taken = {end - start:.3f} seconds")
