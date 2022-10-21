@@ -60,15 +60,15 @@ class Line:
       return "(t: %.2fdeg, r: %.0f)" % (self._theta *360/np.pi, self._rho)
 
 
-def partition_lines(lines):
+def partition_lines(lines: list[Line]):
    h = filter(lambda x: x.is_horizontal(), lines)
    v = filter(lambda x: x.is_vertical(), lines)
 
    h = [(l._center[1], l) for l in h]
    v = [(l._center[0], l) for l in v]
 
-   h.sort()
-   v.sort()
+   h.sort(key=lambda x: x[0])
+   v.sort(key=lambda x: x[0])
 
    h = [l[1] for l in h]
    v = [l[1] for l in v]
@@ -194,6 +194,7 @@ class Quadrangle:
 
    @classmethod
    def get_quad(cls, image, points, houghThreshold=160, hough_threshold_step=20):
+      print('in get quad')
       tmp = np.zeros(image.shape[0:2], np.uint8);
       draw_contour(tmp, points, (255,), 1)
 
@@ -227,7 +228,7 @@ class Quadrangle:
          h2, h1 = horizontal
       else:
          h1, h2 = horizontal
-
+      print('here')
       return cls(h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1))
 
 
