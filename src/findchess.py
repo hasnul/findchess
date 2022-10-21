@@ -308,62 +308,7 @@ def extract_boards(img, grid=None, labels="row", correction=False, brdsize=None)
    return boards, labels
 
 
-def extract_grid(img,
-                nvertical,
-                nhorizontal,
-                threshold1 = 50,
-                threshold2 = 150,
-                apertureSize = 3,
-                hough_threshold_step=20,
-                hough_threshold_min=50,
-                hough_threshold_max=150):
-   """Finds the grid lines in a board image.
-   :param img: board image
-   :param nvertical: number of vertical lines
-   :param nhorizontal: number of horizontal lines
-   :returns: a pair (horizontal, vertical). Both elements are lists with the lines' positions.
-   """
-
-   w, h, _ = img.shape
-   close_threshold_v = (w / nvertical) / 4
-   close_threshold_h = (h / nhorizontal) / 4
-
-   im_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-   _, im_bw = cv2.threshold(im_gray, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-   im_canny = cv2.Canny(im_bw, threshold1, threshold2, apertureSize=apertureSize)
-
-   for i in range((hough_threshold_max - hough_threshold_min + 1) / hough_threshold_step):
-      lines = cv2.HoughLines(im_canny, 1, np.pi / 180, hough_threshold_max - (hough_threshold_step * i))
-      if lines is None:
-         continue
-
-      lines = [Line(l[0], l[1]) for l in lines.squeeze(axis=1)]
-      horizontal, vertical = partition_lines(lines)
-      vertical = filter_close_lines(vertical, horizontal=False, threshold=close_threshold_v)
-      horizontal = filter_close_lines(horizontal, horizontal=True, threshold=close_threshold_h)
-
-      if len(vertical) >= nvertical and len(horizontal) >= nhorizontal:
-         return (horizontal, vertical)
-
-
-def extract_tiles(img, grid, w, h):
-   ret = []
-
-   for x in range(8):
-      v1 = grid[1][x]
-      v2 = grid[1][x+1]
-
-      for y in range(8):
-         h1 = grid[0][y]
-         h2 = grid[0][y+1]
-
-         quad = Quadrangle(h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1))
-         tile = quad.perspective_corr(img, w, h)
-         ret.append(((x,y), tile))
-
-   return ret
-
-
+# So that older notebooks still work without changes
 Perspective = Quadrangle
 
 
@@ -373,10 +318,6 @@ if __name__ == "__main__":
    parser.add_argument('filenames', metavar='filename', type=str, nargs='+',
                        help='The files to process.')
 
-   parser.add_argument('-e', dest='extract_boards', action='store_const',
-                       const=True, default=False,
-                       help='extract boards from images (default: use image as-is)')
-
    args = parser.parse_args()
 
    import time
@@ -384,30 +325,12 @@ if __name__ == "__main__":
    start = time.time()
    for filename in args.filenames:
       image = cv2.imread(filename)
-      print("---- %s ----" % filename)
+      print(f"filename")
 
-      if args.extract_boards:
-         print("Extracting Boards")
+      boards, labels = extract_boards(image, grid=(3, 2), labels="row")
 
-         boards, labels = extract_boards(image, grid=(3, 2), labels="row")
-
-         for i, b in enumerate(boards):
-            cv2.imwrite(f"{labels[i]:04d}.jpg", b)
-
-      else:
-         boards = [image]
-     
-      #for b in boards:
-      #   print("Extracting Grid")
-      #   grid = extract_grid(b, 9, 9)
-
-      #   print(grid)
-      #   if grid is None:
-      #      print("Could not find Grid")
-      #      continue
-
-      #   print("Extracting Tiles")
-      #   tiles = extract_tiles(b, grid, 100, 100)
+      for i, b in enumerate(boards):
+         cv2.imwrite(f"{labels[i]:04d}.jpg", b)
 
    end = time.time()
    print(f"Time taken = {end - start:.3f} seconds")
