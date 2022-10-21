@@ -244,12 +244,21 @@ class Quadrangle:
       return self.perspective_corr(image, w, h, dest)
 
 
-def extract_boards(img, w, h):
-   """Extracts all boards from an image. This function applies perspective correction.
-   :param img: source image
-   :param w: output width
-   :param h: output height
-   :returns: a list the extracted board images
+def extract_boards(img, grid=None, labels="row", correction=False, brdsize=None):
+   """Extracts all boards from an image.
+
+   Arguments:
+      img (numpy array): image containing chess diagrams allegedly
+
+   Keyword arguments:
+      grid (2-tuple): arrangement of boards in rectangular grid as (numrows, numcols)
+      labels (str): "row" or "col" -- count by row first or by column when labelling boards in a grid.
+                    Ignored if grid is None.
+      correction (bool): True => attempt perspective correction
+      brdsize (int): required if correction asked; size of perspective corrected image
+
+   Returns:
+      A 2-tuple: (list of extracted board images, list of board labels)
    """
 
    contours = Contours(img)
