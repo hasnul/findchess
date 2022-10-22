@@ -1,32 +1,40 @@
 #!/bin/env python3
 
+from __future__ import annotations
 import cv2
 import numpy as np
 import argparse
 import sys
 #from scalene import scalene_profiler  # SIGSEGV; possible issue with cv2
+from numpy.typing import NDArray
+from typing import Type, List, Dict, Tuple, Optional, Union
+
+BGRColor = Tuple[int, int, int]
+Coord = Tuple[float, float]
+GridCoord = Tuple[int, int]
+CV2Contour = NDArray
 
 MISSING_BOARD = -1, -1
 UNKNOWN = -1  # num boards a priori
 
 class Line:
-   def __init__(self, rho, theta):
+   def __init__(self, rho: float, theta: float):
       self._rho = rho
       self._theta = theta
-      self._cos_factor = np.cos(theta)
-      self._sin_factor = np.sin(theta)
-      self._center = (self._cos_factor * rho, self._sin_factor * rho)
+      self._cos_factor: float = np.cos(theta)
+      self._sin_factor: float = np.sin(theta)
+      self._center: Coord = self._cos_factor * rho, self._sin_factor * rho
 
-   def get_center(self):
+   def get_center(self) -> Coord:
       return self._center
 
-   def get_rho(self):
+   def get_rho(self) -> float:
       return self._rho
 
-   def get_theta(self):
+   def get_theta(self) -> float:
       return self._theta
 
-   def get_segment(self, lenLeft, lenRight):
+   def get_segment(self, lenLeft: float, lenRight: float) -> tuple[Coord, Coord]:
       a = self._cos_factor
       b = self._sin_factor
       (x0, y0) = self._center
@@ -37,13 +45,13 @@ class Line:
       y2 = int(y0 - lenLeft  * a)
       return ((x1, y1), (x2, y2))
 
-   def is_horizontal(self, thresholdAngle=np.pi / 4):
+   def is_horizontal(self, thresholdAngle: float = np.pi / 4) -> bool:
       return abs(np.sin(self._theta)) > np.cos(thresholdAngle)
 
-   def is_vertical(self, thresholdAngle=np.pi / 4):
+   def is_vertical(self, thresholdAngle: float = np.pi / 4) -> bool:
       return abs(np.cos(self._theta)) > np.cos(thresholdAngle)
 
-   def intersect(self, line):
+   def intersect(self, line: Line) -> Coord:
       ct1 = np.cos(self._theta)
       st1 = np.sin(self._theta)
       ct2 = np.cos(line._theta)
@@ -54,32 +62,32 @@ class Line:
       y = (-ct2 * self._rho + ct1 * line._rho) / d
       return (x, y)
 
-   def draw(self, image, color=(0,0,255), thickness=2):
+   def draw(self, image, color : BGRColor = (0,0,255), thickness : int = 2):
       p1, p2 = self.get_segment(1000,1000)
       cv2.line(image, p1, p2, color, thickness)
 
 
-   def __repr__(self):
+   def __repr__(self) -> str:
       return "(t: %.2fdeg, r: %.0f)" % (self._theta *360/np.pi, self._rho)
 
 
-def partition_lines(lines: list[Line]):
-   h = filter(lambda x: x.is_horizontal(), lines)
-   v = filter(lambda x: x.is_vertical(), lines)
+def partition_lines(lines: List[Line]) -> tuple[List[Line], List[Line]]:
+   hlines = list(filter(lambda x: x.is_horizontal(), lines))
+   vlines = list(filter(lambda x: x.is_vertical(), lines))
 
-   h = [(l._center[1], l) for l in h]
-   v = [(l._center[0], l) for l in v]
+   hlines_with_center = [(l._center[1], l) for l in hlines]
+   vlines_with_center = [(l._center[0], l) for l in vlines]
 
-   h.sort(key=lambda x: x[0])
-   v.sort(key=lambda x: x[0])
+   hlines_with_center.sort(key=lambda x: x[0])
+   vlines_with_center.sort(key=lambda x: x[0])
 
-   h = [l[1] for l in h]
-   v = [l[1] for l in v]
+   h = [l[1] for l in hlines_with_center]
+   v = [l[1] for l in vlines_with_center]
 
    return (h, v)
 
 
-def filter_close_lines(lines, horizontal=True, threshold = 40):
+def filter_close_lines(lines: List[Line], horizontal : bool = True, threshold : int = 40) -> List[Line]:
    if horizontal:
       item = 1
    else:
@@ -97,7 +105,7 @@ def filter_close_lines(lines, horizontal=True, threshold = 40):
    return ret
 
 
-def draw_contour(image, contour, color, thickness=4):
+def draw_contour(image: NDArray, contour: CV2Contour, color : BGRColor, thickness : int = 4):
    rnd = lambda x : (round(x[0]), round(x[1]))
    for i in range(len(contour)):
       p1 = tuple(contour[i])
@@ -107,22 +115,22 @@ def draw_contour(image, contour, color, thickness=4):
 
 class Contours:
    
-   def __init__(self, img):
+   def __init__(self, img: NDArray):
       im_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
       _, self.im_bw = cv2.threshold(im_gray, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
       self.contours, self.hierarchy = cv2.findContours(self.im_bw, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
 
 
-   def __getitem__(self, index):
+   def __getitem__(self, index: int):
       return self.contours[index]
 
 
-   def longest(self):
+   def longest(self) -> Optional[CV2Contour]:
       """Finds the contour enclosing the largest area.
       :returns: the largest countour
       """
 
-      longest = (0, [])
+      longest : Tuple[float, Optional[CV2Contour]] = (0, None)
       for c in self.contours:
          contour_area = cv2.contourArea(c)
          if contour_area > longest[0]:
@@ -131,7 +139,7 @@ class Contours:
       return longest[1]
 
 
-   def filter(self, min_ratio_bounding=0.6, min_area_percentage=0.01, max_area_percentage=0.40):
+   def filter(self, min_ratio_bounding=0.6, min_area_percentage=0.01, max_area_percentage=0.40) -> List[CV2Contour]:
       """Filters a contour list based on some rules. If hierarchy != None,
       only top-level contours are considered.
       :param min_ratio_bounding: minimum contour area vs. bounding box area ratio
@@ -185,20 +193,22 @@ class Contours:
 
 
 class Quadrangle:
-   def __init__(self, a, b, c, d):
+   def __init__(self, a: Coord, b: Coord, c: Coord, d: Coord):
       self.corners = a, b, c, d
 
 
    # To keep old notebooks working
    @classmethod
-   def get_perspective(cls, image, points, houghThreshold=160, hough_threshold_step=20):
+   def get_perspective(cls: Type[Quadrangle], image: NDArray, points: CV2Contour,
+                       houghThreshold : int = 160, hough_threshold_step : int = 20) -> Optional[Quadrangle]:
       return cls.get_quad(image, points, houghThreshold, hough_threshold_step)
 
 
    @classmethod
-   def get_quad(cls, image, points, houghThreshold=160, hough_threshold_step=20):
-      tmp = np.zeros(image.shape[0:2], np.uint8);
-      draw_contour(tmp, points, (255,), 1)
+   def get_quad(cls: Type[Quadrangle], image: NDArray, points: CV2Contour,
+                houghThreshold : int = 160, hough_threshold_step : int = 20) -> Optional[Quadrangle]:
+      tmp = np.zeros(image.shape[0:2], np.uint8)
+      draw_contour(tmp, points, (255, 255, 255), 1)
 
       grid = None
       for i in range(houghThreshold//hough_threshold_step):
@@ -230,10 +240,12 @@ class Quadrangle:
          h2, h1 = horizontal
       else:
          h1, h2 = horizontal
+
       return cls(h1.intersect(v1), h1.intersect(v2), h2.intersect(v2), h2.intersect(v1))
 
 
-   def perspective_corr(self, image, w, h, dest=None):
+   def perspective_corr(self, image: NDArray, w: int, h: int,
+                        dest: Optional[Tuple[Coord, Coord, Coord, Coord]] = None) -> NDArray:
       if dest is None:
          dest = ((0,0), (w, 0), (w,h), (0, h))
 
@@ -243,17 +255,21 @@ class Quadrangle:
          corners = ((0,0), (im_w, 0), (im_w,im_h), (0, im_h))
 
       quadrangle = np.array(corners ,np.float32)
-      dest = np.array(dest ,np.float32)
+      dest_arr = np.array(dest ,np.float32)
 
-      coeffs = cv2.getPerspectiveTransform(quadrangle, dest)
+      coeffs = cv2.getPerspectiveTransform(quadrangle, dest_arr)
       return cv2.warpPerspective(image, coeffs, (w, h))
    
 
-   def correction(self, image, w, h, dest=None):  # support older code
+   # support older coder
+   def correction(self, image: NDArray, w: int, h: int,
+                        dest: Optional[Tuple[Coord, Coord, Coord, Coord]] = None) -> NDArray:
       return self.perspective_corr(image, w, h, dest)
 
 
-def extract_boards(img, grid=None, priority="row", correction=False, brdsize=None):
+def extract_boards(img: NDArray, grid: Optional[Tuple[int, int]] = None, priority : str = "row",
+                   correction: bool = False, brdsize: Optional[int] = None
+                   ) -> Tuple[List[Union[NDArray, None]], Union[List[GridCoord], List[int]]]:
    """Extracts all boards from an image.
 
    Arguments:
@@ -272,18 +288,21 @@ def extract_boards(img, grid=None, priority="row", correction=False, brdsize=Non
 
    contours = Contours(img)
    filtered = contours.filter()
-   boards = []
+   boards : List[Union[NDArray, None]] = []
    centroids = []
    centroid = lambda m : (int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"]))
    for contour in filtered:
-      contour = np.squeeze(contour, 1)
+      contour_arr = np.squeeze(contour, 1)
       if correction:
          assert brdsize is not None
          assert isinstance(brdsize, int)
-         quad = Quadrangle.get_quad(img, contour)
-         b = quad.perspective_corr(img, brdsize, brdsize)
+         quad = Quadrangle.get_quad(img, contour_arr)
+         if quad:
+            b = quad.perspective_corr(img, brdsize, brdsize)
+         else:
+            b = None
       else:
-         x, y, w, h = cv2.boundingRect(contour)
+         x, y, w, h = cv2.boundingRect(contour_arr)
          b = img[y:y+h, x:x+w]
       boards.append(b)
       centroids.append(np.array(centroid(cv2.moments(contour))))
@@ -295,20 +314,20 @@ def extract_boards(img, grid=None, priority="row", correction=False, brdsize=Non
       img_height, img_width, _ = img.shape
       grid_height = img_height // numrows
       grid_width = img_width // numcols
-      centroids = np.array(centroids)
+      centroids_arr = np.array(centroids)
 
-      def label(index: int) -> tuple[int]:
+      def label(index: int) -> tuple[int, int]:
          try:
-            col = centroids[index][0] // grid_width
-            row = centroids[index][1] // grid_height
+            col = centroids_arr[index][0] // grid_width
+            row = centroids_arr[index][1] // grid_height
          except IndexError as e:
             return MISSING_BOARD
          return row, col
 
-      labels = [label(i) for i in range(numrows*numcols)]
+      labels : Union[List[GridCoord], List[int]] = [label(i) for i in range(numrows*numcols)]
 
    else:
-      labels = list(range(len(boards)))
+      labels  = list(range(len(boards)))
 
    return boards, labels
 
@@ -350,7 +369,7 @@ if __name__ == "__main__":
    else:
       numboards = UNKNOWN
 
-   missing = dict()
+   missing : Dict[str, List[Tuple[np.signedinteger, ...]]] = dict()
    for filenum, filename in enumerate(args.filenames):
       image = cv2.imread(filename)
 
@@ -373,11 +392,13 @@ if __name__ == "__main__":
                if labels[i] == MISSING_BOARD:
                   continue
 
-               row, col = labels[i]
+               row, col = labels[i]  # type: ignore
                board_num = col + row*args.cols if args.label == "row" else row + col*args.rows
                label = filenum*numboards + board_num + 1
                savefile = f"{args.offset + label:04d}.jpg"
                b = boards[board_idx]
+               if b is None:
+                  continue
                if args.crop:
                   cv2.imwrite(savefile, b[args.crop:-args.crop, args.crop:-args.crop])
                else:
