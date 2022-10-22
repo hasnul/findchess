@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import argparse
 import sys
+#from scalene import scalene_profiler  # SIGSEGV; possible issue with cv2
 
 MISSING_BOARD = -1, -1
 UNKNOWN = -1  # num boards a priori
@@ -342,6 +343,7 @@ if __name__ == "__main__":
 
    import time
    start = time.time()
+   #scalene_profiler.start()
 
    if args.rows and args.cols:
       numboards = args.rows * args.cols
@@ -406,4 +408,4 @@ if __name__ == "__main__":
 
    end = time.time()
    print(f"Time taken = {end - start:.3f} seconds")
-
+   #scalene_profiler.stop()
