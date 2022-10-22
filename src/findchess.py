@@ -16,10 +16,27 @@ CV2Contour = NDArray
 
 MISSING_BOARD = -1, -1
 UNKNOWN = -1  # num boards a priori
+RED = (0, 0, 255)  # BGR
+MAX_SEGMENT = 1000  # pixels
+
+
+class LineError(Exception):
+    pass
 
 
 class Line:
+    """
+    Representation of a line in Hough space.
+    """
+
     def __init__(self, rho: float, theta: float):
+
+        if rho < 0:
+            raise LineError(f"Expected parameter rho >= 0 but got rho = {rho:.3f}")
+
+        if theta < 0 or theta > np.pi:
+            raise LineError(f"Expected parameter theta to be >= 0 and < np.pi but got theta = {theta:.3f}")
+
         self._rho = rho
         self._theta = theta
         self._cos_factor: float = np.cos(theta)
@@ -35,46 +52,59 @@ class Line:
     def get_theta(self) -> float:
         return self._theta
 
-    def get_segment(self, lenLeft: float, lenRight: float) -> tuple[Coord, Coord]:
+    def get_segment(self, left_len: float, right_len: float) -> tuple[Coord, Coord]:
+        """ Calculate the x-y coordinates of the ends of a segment derived from the line.
+
+        Arguments:
+            left_len (float): distance from the 'center' to the 'left' end of the segment
+            right_len (float): distance from the 'center' to the 'right' end of the segment
+
+        Returns:
+            A tuple of 2-tuples containing the x-y coordinates of the line segment endpoints in image space.
+        """
+        if left_len < 0 or right_len < 0:
+            raise LineError("Distance from center must be positive")
+
         a = self._cos_factor
         b = self._sin_factor
         (x0, y0) = self._center
 
-        x1 = int(x0 + lenRight * (-b))
-        y1 = int(y0 + lenRight * a)
-        x2 = int(x0 - lenLeft * (-b))
-        y2 = int(y0 - lenLeft * a)
+        x1 = round(x0 + right_len * (-b))
+        y1 = round(y0 + right_len * a)
+        x2 = round(x0 - left_len * (-b))
+        y2 = round(y0 - left_len * a)
         return ((x1, y1), (x2, y2))
 
-    def is_horizontal(self, thresholdAngle: float = np.pi / 4) -> bool:
-        return abs(np.sin(self._theta)) > np.cos(thresholdAngle)
+    def is_above_threshold(self, threshold: float = np.pi/4) -> bool:
+        return self._theta > threshold
 
-    def is_vertical(self, thresholdAngle: float = np.pi / 4) -> bool:
-        return abs(np.cos(self._theta)) > np.cos(thresholdAngle)
+    # Strictly speaking below or equal to threshold; however it's a floating point "equality"
+    def is_below_threshold(self, threshold: float = np.pi/4) -> bool:
+        return not self.is_above_threshold(threshold)
 
     def intersect(self, line: Line) -> Coord:
-        ct1 = np.cos(self._theta)
-        st1 = np.sin(self._theta)
-        ct2 = np.cos(line._theta)
-        st2 = np.sin(line._theta)
+        ct1, st1 = self._cos_factor, self._sin_factor
+        ct2, st2 = line._cos_factor, line._sin_factor
         d = ct1 * st2 - st1 * ct2
-        if d == 0.0:
-            raise ValueError('parallel lines: %s, %s)' % (str(self), str(line)))
+
+        if np.isclose(d, 0.0):  # default atol = 1e-8
+            raise LineError('Parallel lines: %s, %s)' % (str(self), str(line)))
+
         x = (st2 * self._rho - st1 * line._rho) / d
         y = (-ct2 * self._rho + ct1 * line._rho) / d
         return (x, y)
 
-    def draw(self, image, color: BGRColor = (0, 0, 255), thickness: int = 2):
-        p1, p2 = self.get_segment(1000, 1000)
+    def draw(self, image, length: int = MAX_SEGMENT, color: BGRColor = RED, thickness: int = 2):
+        p1, p2 = self.get_segment(length, length)
         cv2.line(image, p1, p2, color, thickness)
 
     def __repr__(self) -> str:
-        return "(t: %.2fdeg, r: %.0f)" % (self._theta * 360/np.pi, self._rho)
+        return "(t: %.2fdeg, r: %.0f)" % (self._theta * 180/np.pi, self._rho)
 
 
 def partition_lines(lines: List[Line]) -> tuple[List[Line], List[Line]]:
-    hlines = list(filter(lambda x: x.is_horizontal(), lines))
-    vlines = list(filter(lambda x: x.is_vertical(), lines))
+    hlines = list(filter(lambda x: x.is_below_threshold(), lines))
+    vlines = list(filter(lambda x: x.is_above_threshold(), lines))
 
     hlines_with_center = [(line._center[1], line) for line in hlines]
     vlines_with_center = [(line._center[0], line) for line in vlines]
