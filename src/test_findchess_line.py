@@ -1,4 +1,4 @@
-from findchess import Line, Contours, LineError, Quadrangle
+from findchess import Line, LineError
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest

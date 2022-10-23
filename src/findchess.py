@@ -128,14 +128,6 @@ class Line:
         return filtered
 
 
-def draw_contour(image: NDArray, contour: CV2Contour, color: BGRColor, thickness: int = 4):
-    def rnd(x): return (round(x[0]), round(x[1]))
-    for i in range(len(contour)):
-        p1 = tuple(contour[i])
-        p2 = tuple(contour[int((i+1) % len(contour))])
-        cv2.line(image, rnd(p1), rnd(p2), color, thickness)
-
-
 class Contours:
 
     def __init__(self, img: NDArray):
@@ -210,6 +202,14 @@ class Contours:
 
         return filtered
 
+    @staticmethod
+    def draw_contour(image: NDArray, contour: CV2Contour, color: BGRColor, thickness: int = 4):
+        def rnd(x): return (round(x[0]), round(x[1]))
+        for i in range(len(contour)):
+            p1 = tuple(contour[i])
+            p2 = tuple(contour[int((i+1) % len(contour))])
+            cv2.line(image, rnd(p1), rnd(p2), color, thickness)
+
 
 class Quadrangle:
     def __init__(self, a: Coord, b: Coord, c: Coord, d: Coord):
@@ -225,7 +225,7 @@ class Quadrangle:
     def get_quad(cls: Type[Quadrangle], image: NDArray, points: CV2Contour,
                  houghThreshold: int = 160, hough_threshold_step: int = 20) -> Optional[Quadrangle]:
         tmp = np.zeros(image.shape[0:2], np.uint8)
-        draw_contour(tmp, points, (255, 255, 255), 1)
+        Contours.draw_contour(tmp, points, (255, 255, 255), 1)
 
         grid = None
         for i in range(houghThreshold//hough_threshold_step):
