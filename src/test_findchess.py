@@ -63,11 +63,14 @@ def test_line_get_segment(line, line_params):
     assert p1 == (0, BOX_WIDTH) and p2 == (BOX_WIDTH, 0)
 
 
-def test_line_bool_methods(line, line_params):
-    theta = line_params['theta']
-    assert line.is_below_threshold(theta + 0.2*theta)
-    # assert line1.is_below_threshold(theta)  # Is this a reliable test?
-    assert line.is_above_threshold(theta - 0.5*theta)
+def test_line_bool_methods():
+    theta = [np.pi/2 * 0.8, 1.2*np.pi/2]
+    lines = [Line(50, t) for t in theta]
+    assert all(line.inside_threshold_range() for line in lines)
+
+    theta = [np.pi/2 * 0.1, 0.9*np.pi]
+    lines = [Line(50, t) for t in theta]
+    assert all(not line.inside_threshold_range() for line in lines)
 
 
 def test_line_intersect(line, line_params):
@@ -108,3 +111,60 @@ def test_line_repr(line):
     assert isinstance(line.__repr__(), str)
     repr = f"(t: {line._theta*180/np.pi:.2f}deg, r: {line._rho:.0f})"
     assert line.__repr__() == repr
+
+
+def test_line_eq(line, line_params):
+    eps = 1e-9
+    assert line == Line(line_params['rho'] + eps, line_params['theta'] - eps)
+    eps = 1e-8
+    assert line == Line(line_params['rho'] + eps, line_params['theta'] - eps)
+    eps = 1e-5
+    assert line != Line(line_params['rho'] + eps, line_params['theta'] - eps)
+
+
+def test_line_partition_lines():
+    hangle = np.pi/2
+    vangle = 0
+    hlines = [Line(80, hangle), Line(40, hangle), Line(60, hangle)]
+    vlines = [Line(80, vangle), Line(60, vangle), Line(40, vangle)]
+    lines = hlines[0:2] + vlines[0:2] + [hlines[2]] + [vlines[2]]
+    out1, out2 = Line.partition_lines(lines)
+    assert all(out1[i]._theta == hangle for i in range(len(out1)))
+    assert all(out2[i]._theta == vangle for i in range(len(out2)))
+
+
+def test_line_discard_close_lines():
+
+    def index(is_horizontal): return 1 if is_horizontal else 0
+
+    def threshold(angle, is_horizontal, mindist):
+        return np.sin(angle)*mindist if is_horizontal else np.cos(angle)*mindist
+
+    mindist = 5
+    hangle = np.pi/2
+    hlines = [Line(80, hangle), Line(40, hangle), Line(60, hangle), Line(42, hangle),
+              Line(43, hangle), Line(63, hangle)]
+
+    horizontal = True
+    hlines_sorted = sorted(hlines, key=lambda line: line._center[index(horizontal)])
+    threshold1 = threshold(hangle, horizontal, mindist)
+    filtered = Line.discard_close_lines(hlines_sorted, horizontal, threshold1)
+    assert filtered[0] == hlines[3]
+    assert filtered[1] == hlines[-1]
+    assert filtered[2] == hlines[0]
+
+    vangle = 0
+    vlines = hlines.copy()
+    for v in vlines:
+        v._theta = vangle
+        v._cos_factor = np.cos(vangle)
+        v._sin_factor = np.sin(vangle)
+        v._center = v._cos_factor * v._rho, v._sin_factor * v._rho
+
+    horizontal = False
+    vlines_sorted = sorted(vlines, key=lambda line: line._center[index(horizontal)])
+    threshold2 = threshold(vangle, horizontal, mindist)
+    filtered = Line.discard_close_lines(vlines_sorted, horizontal, threshold2)
+    assert filtered[0] == vlines[3]
+    assert filtered[1] == vlines[-1]
+    assert filtered[2] == vlines[0]

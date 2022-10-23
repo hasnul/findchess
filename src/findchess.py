@@ -75,12 +75,8 @@ class Line:
         y2 = round(y0 - left_len * a)
         return ((x1, y1), (x2, y2))
 
-    def is_above_threshold(self, threshold: float = np.pi/4) -> bool:
-        return self._theta > threshold
-
-    # Strictly speaking below or equal to threshold; however it's a floating point "equality"
-    def is_below_threshold(self, threshold: float = np.pi/4) -> bool:
-        return not self.is_above_threshold(threshold)
+    def inside_threshold_range(self, threshold: float = np.pi/4) -> bool:
+        return self._theta > threshold and self._theta < (np.pi - threshold)
 
     def intersect(self, line: Line) -> Coord:
         ct1, st1 = self._cos_factor, self._sin_factor
@@ -101,39 +97,35 @@ class Line:
     def __repr__(self) -> str:
         return "(t: %.2fdeg, r: %.0f)" % (self._theta * 180/np.pi, self._rho)
 
+    def __eq__(self, line: Line) -> bool:
+        return np.isclose(self._rho, line._rho) and np.isclose(self._theta, line._theta)  # atol = 1e-8
 
-def partition_lines(lines: List[Line]) -> tuple[List[Line], List[Line]]:
-    hlines = list(filter(lambda x: x.is_below_threshold(), lines))
-    vlines = list(filter(lambda x: x.is_above_threshold(), lines))
+    @staticmethod
+    def partition_lines(lines: List[Line]) -> tuple[List[Line], List[Line]]:
+        inside = list(filter(lambda line: line.inside_threshold_range(), lines))
+        outside = list(filter(lambda line: not line.inside_threshold_range(), lines))
+        return inside, outside
 
-    hlines_with_center = [(line._center[1], line) for line in hlines]
-    vlines_with_center = [(line._center[0], line) for line in vlines]
+    @staticmethod
+    def discard_close_lines(sorted_lines: List[Line], horizontal: bool = True, threshold: int = 40) -> List[Line]:
 
-    hlines_with_center.sort(key=lambda x: x[0])
-    vlines_with_center.sort(key=lambda x: x[0])
+        index = 1 if horizontal else 0
 
-    h = [line[1] for line in hlines_with_center]
-    v = [line[1] for line in vlines_with_center]
+        def find_cluster_starting_at(i):
+            start = i
+            start_center = sorted_lines[start]._center[index]
+            while i < len(sorted_lines) and (sorted_lines[i]._center[index] - start_center < threshold):
+                i += 1
+            middle = (i - start)//2
+            return sorted_lines[start + middle], i
 
-    return (h, v)
+        next = 0
+        filtered = []
+        while next < len(sorted_lines):
+            cluster_average, next = find_cluster_starting_at(next)
+            filtered.append(cluster_average)
 
-
-def filter_close_lines(lines: List[Line], horizontal: bool = True, threshold: int = 40) -> List[Line]:
-    if horizontal:
-        item = 1
-    else:
-        item = 0
-
-    i = 0
-    ret = []
-
-    while i < len(lines):
-        itmp = i
-        while i < len(lines) and (lines[i]._center[item] - lines[itmp]._center[item] < threshold):
-            i += 1
-        ret.append(lines[itmp + int((i - itmp) / 2)])
-
-    return ret
+        return filtered
 
 
 def draw_contour(image: NDArray, contour: CV2Contour, color: BGRColor, thickness: int = 4):
@@ -245,9 +237,11 @@ class Quadrangle:
 
             lines = [Line(line[0], line[1]) for line in hough_lines.squeeze(axis=1)]  # list of Line objects
 
-            horizontal, vertical = partition_lines(lines)
-            vertical = filter_close_lines(vertical, horizontal=False)
-            horizontal = filter_close_lines(horizontal, horizontal=True)
+            horizontal, vertical = Line.partition_lines(lines)
+            vertical.sort(key=lambda line: line._center[0])
+            vertical = Line.discard_close_lines(vertical, horizontal=False)
+            horizontal.sort(key=lambda line: line._center[1])
+            horizontal = Line.discard_close_lines(horizontal, horizontal=True)
 
             if len(vertical) == 2 and len(horizontal) == 2:
                 grid = (vertical, horizontal)
