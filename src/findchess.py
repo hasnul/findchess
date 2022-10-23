@@ -122,8 +122,8 @@ class Line:
         next = 0
         filtered = []
         while next < len(sorted_lines):
-            cluster_average, next = find_cluster_starting_at(next)
-            filtered.append(cluster_average)
+            cluster_middle, next = find_cluster_starting_at(next)
+            filtered.append(cluster_middle)
 
         return filtered
 
