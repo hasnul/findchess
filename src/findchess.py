@@ -15,7 +15,7 @@ GridCoord = Tuple[int, int]
 CV2Contour = NDArray
 
 MISSING_BOARD = -1, -1
-UNKNOWN = -1  # num boards a priori
+UNKNOWN = -1
 RED = (0, 0, 255)  # BGR
 MAX_SEGMENT = 1000  # pixels
 
@@ -211,6 +211,10 @@ class Contours:
             cv2.line(image, rnd(p1), rnd(p2), color, thickness)
 
 
+def draw_contour(image: NDArray, contour: CV2Contour, color: BGRColor, thickness: int = 4):
+    Contours.draw_contour(image, contour, color, thickness)
+
+
 class Quadrangle:
     def __init__(self, a: Coord, b: Coord, c: Coord, d: Coord):
         self.corners = a, b, c, d
@@ -284,69 +288,162 @@ class Quadrangle:
         return self.perspective_corr(image, w, h, dest)
 
 
-def extract_boards(img: NDArray, grid: Optional[Tuple[int, int]] = None, priority: str = "row",
-                   correction: bool = False, brdsize: Optional[int] = None
-                   ) -> Tuple[List[Union[NDArray, None]], Union[List[GridCoord], List[int]]]:
-    """Extracts all boards from an image.
+class BoardError(Exception):
+    pass
 
-    Arguments:
-        img (numpy array): image containing chess diagrams allegedly
 
-    Keyword arguments:
-        grid (2-tuple): arrangement of boards in rectangular grid as (numrows, numcols)
-        priority (str): "row" or "col" -- count by row first or by column when labelling boards in a grid.
-                          Ignored if grid is None.
-        correction (bool): True => attempt perspective correction
-        brdsize (int): required if correction asked; size of perspective corrected image
+class BoardCanvas:
 
-    Returns:
-        A 2-tuple: (list of extracted board images, list of board labels)
-    """
+    def __init__(self, filenames: str, rows: int = None, cols: int = None, priority: str = "row",
+                 offset: int = 0, crop: int = None):
 
-    contours = Contours(img)
-    filtered = contours.filter()
-    boards: List[Union[NDArray, None]] = []
-    centroids = []
-    def centroid(m): return (int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"]))
-    for contour in filtered:
-        contour_arr = np.squeeze(contour, 1)
-        if correction:
-            assert brdsize is not None
-            assert isinstance(brdsize, int)
-            quad = Quadrangle.get_quad(img, contour_arr)
-            if quad:
-                b = quad.perspective_corr(img, brdsize, brdsize)
-            else:
-                b = None
+        self.filenames = filenames
+
+        if (rows and not cols) or (not rows and cols):
+            raise BoardError("Rows and columns must be specified together")
+        if rows and cols:
+            self.grid = rows, cols
+            self.rows = rows
+            self.cols = cols
+            self.numboards = rows * cols
         else:
-            x, y, w, h = cv2.boundingRect(contour_arr)
-            b = img[y:y+h, x:x+w]
-        boards.append(b)
-        centroids.append(np.array(centroid(cv2.moments(contour))))
+            self.grid = None
+            self.numboards = UNKNOWN
 
-    if grid:
+        self.offset = offset
+        self.crop = crop
+        self.priority = priority
+        self.missing: Dict[str, List[Tuple[np.signedinteger, ...]]] = dict()
 
-        assert len(grid) == 2
-        numrows, numcols = grid
-        img_height, img_width, _ = img.shape
-        grid_height = img_height // numrows
-        grid_width = img_width // numcols
-        centroids_arr = np.array(centroids)
+    def save_boards(self):
 
-        def label(index: int) -> tuple[int, int]:
-            try:
-                col = centroids_arr[index][0] // grid_width
-                row = centroids_arr[index][1] // grid_height
-            except IndexError:
-                return MISSING_BOARD
-            return row, col
+        for filenum, filename in enumerate(self.filenames):
 
-        labels: Union[List[GridCoord], List[int]] = [label(i) for i in range(numrows*numcols)]
+            image = cv2.imread(filename)
+            print(f"{filename}")
 
-    else:
-        labels = list(range(len(boards)))
+            if self.numboards != UNKNOWN:
+                boards, labels = self.extract_boards(image, self.grid, self.priority)
+                board_idx = 0
+                found = []
+                for i in range(self.numboards):
 
-    return boards, labels
+                    if labels[i] == MISSING_BOARD:
+                        continue
+
+                    row, col = labels[i]  # type: ignore
+                    board_num = col + row*self.cols if self.priority == "row" else row + col*self.rows
+                    label = filenum*self.numboards + board_num + 1
+                    savefile = f"{self.offset + label:04d}.jpg"
+                    b = boards[board_idx]
+                    if b is None:
+                        continue
+                    if self.crop:
+                        cv2.imwrite(savefile, b[self.crop:-self.crop, self.crop:-self.crop])
+                    else:
+                        cv2.imwrite(savefile, b)
+                    board_idx += 1
+                    found.append(labels[i])
+
+                for j in range(self.numboards):
+                    coord = np.unravel_index(j, (self.rows, self.cols))
+                    if coord in found:
+                        continue
+                    if filename in self.missing:
+                        self.missing[filename].append(coord)
+                    else:
+                        self.missing[filename] = [coord]
+
+            else:
+                # TODO
+                boards, labels = self.extract_boards(image)
+
+    def print_missing_stats(self):
+        if not self.missing:
+            return
+
+        print("Missing boards:")
+        total_missing = 0
+        for i, m in enumerate(self.missing.items()):
+            print(f"{i+1:04d}. {m[0]}, Board: {m[1]}")
+            total_missing += len(m[1])
+        print(f"Total missing = {total_missing} boards")
+        print(f"Miss percentage = {total_missing/(len(self.filenames)*self.numboards)*100:.1f}%")
+
+    def print(self):
+        for filename in self.filenames:
+            image = cv2.imread(filename)
+            if image is None:
+                continue
+            if self.grid:
+                self.boards, _ = self.extract_boards(image, self.grid, self.priority)
+            else:
+                self.boards, _ = self.extract_boards(image)
+            print(f"{filename}: {len(self.boards)}")
+
+    def extract_boards(self, img: NDArray, grid: Optional[Tuple[int, int]] = None, priority: str = "row",
+                       correction: bool = False, brdsize: Optional[int] = None
+                       ) -> Tuple[List[Union[NDArray, None]], Union[List[GridCoord], List[int]]]:
+        """Extracts all boards from an image.
+
+        Arguments:
+            img (numpy array): image containing chess diagrams allegedly
+
+        Keyword arguments:
+            grid (2-tuple): arrangement of boards in rectangular grid as (numrows, numcols)
+            priority (str): "row" or "col" -- count by row first or by column when labelling boards in a grid.
+                            Ignored if grid is None.
+            correction (bool): True => attempt perspective correction
+            brdsize (int): required if correction asked; size of perspective corrected image
+
+        Returns:
+            A 2-tuple: (list of extracted board images, list of board labels)
+        """
+
+        contours = Contours(img)
+        filtered = contours.filter()
+        boards: List[Union[NDArray, None]] = []
+        centroids = []
+        def centroid(m): return (int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"]))
+        for contour in filtered:
+            contour_arr = np.squeeze(contour, 1)
+            if correction:
+                assert brdsize is not None
+                assert isinstance(brdsize, int)
+                quad = Quadrangle.get_quad(img, contour_arr)
+                if quad:
+                    b = quad.perspective_corr(img, brdsize, brdsize)
+                else:
+                    b = None
+            else:
+                x, y, w, h = cv2.boundingRect(contour_arr)
+                b = img[y:y+h, x:x+w]
+            boards.append(b)
+            centroids.append(np.array(centroid(cv2.moments(contour))))
+
+        if grid:
+
+            assert len(grid) == 2
+            numrows, numcols = grid
+            img_height, img_width, _ = img.shape
+            grid_height = img_height // numrows
+            grid_width = img_width // numcols
+            centroids_arr = np.array(centroids)
+
+            def label(index: int) -> tuple[int, int]:
+                try:
+                    col = centroids_arr[index][0] // grid_width
+                    row = centroids_arr[index][1] // grid_height
+                except IndexError:
+                    return MISSING_BOARD
+                return row, col
+
+            labels: Union[List[GridCoord], List[int]] = [label(i) for i in range(numrows*numcols)]
+
+        else:
+            labels = list(range(len(boards)))
+
+        return boards, labels
 
 
 # So that older notebooks still work without changes
@@ -383,67 +480,16 @@ if __name__ == "__main__":
     # scalene_profiler.start()
 
     if args.rows and args.cols:
-        numboards = args.rows * args.cols
+        board_canvas = BoardCanvas(args.filenames, args.rows, args.cols, args.label, args.offset, args.crop)
     else:
-        numboards = UNKNOWN
+        board_canvas = BoardCanvas(args.filenames)
 
-    missing: Dict[str, List[Tuple[np.signedinteger, ...]]] = dict()
-    for filenum, filename in enumerate(args.filenames):
-        image = cv2.imread(filename)
+    if args.print:
+        board_canvas.print()
+        sys.exit()
 
-        if args.rows and args.cols:
-            boards, labels = extract_boards(image, grid=(args.rows, args.cols), priority=args.label)
-        else:
-            boards, labels = extract_boards(image)
-
-        if args.print:
-            print(f"{filename}: {len(boards)}")
-
-        else:
-            print(f"{filename}")
-            if numboards != UNKNOWN:
-
-                board_idx = 0
-                found = []
-                for i in range(numboards):
-
-                    if labels[i] == MISSING_BOARD:
-                        continue
-
-                    row, col = labels[i]  # type: ignore
-                    board_num = col + row*args.cols if args.label == "row" else row + col*args.rows
-                    label = filenum*numboards + board_num + 1
-                    savefile = f"{args.offset + label:04d}.jpg"
-                    b = boards[board_idx]
-                    if b is None:
-                        continue
-                    if args.crop:
-                        cv2.imwrite(savefile, b[args.crop:-args.crop, args.crop:-args.crop])
-                    else:
-                        cv2.imwrite(savefile, b)
-                    board_idx += 1
-                    found.append(labels[i])
-
-                for j in range(numboards):
-                    coord = np.unravel_index(j, (args.rows, args.cols))
-                    if coord in found:
-                        continue
-                    if filename in missing:
-                        missing[filename].append(coord)
-                    else:
-                        missing[filename] = [coord]
-
-            else:
-                pass
-
-    if missing:
-        print("Missing boards:")
-        total_missing = 0
-        for i, m in enumerate(missing.items()):
-            print(f"{i+1:04d}. {m[0]}, Board: {m[1]}")
-            total_missing += len(m[1])
-        print(f"Total missing = {total_missing} boards")
-        print(f"Miss percentage = {total_missing/(len(args.filenames)*numboards)*100:.1f}%")
+    board_canvas.save_boards()
+    board_canvas.print_missing_stats()
 
     end = time.time()
     print(f"Time taken = {end - start:.3f} seconds")
